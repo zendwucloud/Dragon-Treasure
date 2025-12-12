@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.54 微幅回彈版)</title>
+    <title>火龍祕寶 (V13.55 節奏優化版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -232,7 +232,7 @@
             z-index: 1000; cursor: pointer; 
         }
 
-        /* ★ V13.54 修正：減半回彈幅度 ★ */
+        /* V13.54 微幅回彈 */
         @keyframes landBounce { 
             0% { transform: translateY(-7.5%); opacity: 1; } 
             50% { transform: translateY(6%); } 
@@ -1066,7 +1066,8 @@
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    await wait(c * 100); 
+                    /* ★ V13.55: 停輪間隔改為 300ms */
+                    await wait(c * 300); 
                     
                     let colDiv = document.getElementById(`col-${c}`);
                     let currentSyms = [...gridData[c]];
@@ -1127,7 +1128,7 @@
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
-                    /* ★ V13.52: JS 時間設定為 2000ms，配合 CSS 2.0s */
+                    /* JS 時間設定為 2000ms，配合 CSS 2.0s */
                     await wait(2000); 
                     
                     AudioMgr.playSFX('stop');
