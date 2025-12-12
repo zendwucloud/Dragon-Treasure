@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.52 Loading完美定版)</title>
+    <title>火龍祕寶 (V13.54 微幅回彈版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -30,18 +30,16 @@
         }
         .stage.loaded { opacity: 1; }
 
-        /* --- ★ V13.52 Loading Screen (修正版) ★ --- */
+        /* --- Loading Screen (V13.52 樣式) --- */
         #loading-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            /* 移除黑色遮罩，直接透出 body 的 background.jpg */
-            background-color: transparent; 
+            background-color: transparent; /* 透出背景 */
             z-index: 9999;
             display: flex; justify-content: center; align-items: center;
             transition: opacity 0.5s ease-out;
         }
         #loading-layer.hidden { opacity: 0; pointer-events: none; }
 
-        /* 建立一個跟遊戲舞台一樣大的容器，限制 Loading 內容範圍 */
         .loading-container {
             position: relative;
             width: 100vh * 9 / 16; 
@@ -51,67 +49,47 @@
             display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
         }
 
-        /* 主視覺海報 (滿版，靜止不動) */
         .loading-visual {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; /* 完美填滿遊戲範圍 */
-            z-index: 0;
-            border-radius: 0; 
-            /* 移除動畫 animation: none; */
+            object-fit: cover; z-index: 0; border-radius: 0; 
         }
 
-        /* 底部區域 (限制在 loading-container 內，確保手機看得到) */
         .loading-bottom-ui {
-            position: relative; 
-            z-index: 10; /* 在圖片上層 */
-            width: 85%; /* 寬度限制在 720 範圍的 85% */
-            margin-bottom: 8%; /* 距離底部的位置 */
-            display: flex; flex-direction: column; align-items: center;
-            text-align: center;
+            position: relative; z-index: 10; width: 85%; margin-bottom: 8%;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
         }
 
         .loading-text { 
-            font-family: 'Arial Black', sans-serif; 
-            color: #ffd700; 
-            font-size: 2.2vh; 
-            margin-bottom: 1.5vh; 
-            text-shadow: 0 0 5px #000, 0 0 10px #ff4500; 
-            letter-spacing: 1px; 
+            font-family: 'Arial Black', sans-serif; color: #ffd700; font-size: 2.2vh; 
+            margin-bottom: 1.5vh; text-shadow: 0 0 5px #000, 0 0 10px #ff4500; letter-spacing: 1px; 
         }
         
         .progress-bar-bg {
-            width: 100%; height: 1.5vh; 
-            background: rgba(0, 0, 0, 0.6); 
-            border: 2px solid #ffd700;
-            border-radius: 10px; overflow: hidden;
+            width: 100%; height: 1.5vh; background: rgba(0, 0, 0, 0.6); 
+            border: 2px solid #ffd700; border-radius: 10px; overflow: hidden;
             box-shadow: 0 0 15px rgba(0,0,0,0.8);
         }
         .progress-bar-fill {
-            width: 0%; height: 100%; 
-            background: linear-gradient(90deg, #ff4500, #ffff00);
-            box-shadow: 0 0 10px #ff4500;
-            transition: width 0.2s;
+            width: 0%; height: 100%; background: linear-gradient(90deg, #ff4500, #ffff00);
+            box-shadow: 0 0 10px #ff4500; transition: width 0.2s;
         }
 
         #btn-start-game {
             margin-top: 3vh; padding: 1.5vh 6vh;
-            font-family: 'Arial Black', sans-serif;
-            font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000);
+            font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; 
+            background: linear-gradient(180deg, #ff4500, #8b0000);
             border: 2px solid #ffd700; border-radius: 50px;
             box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3);
-            cursor: pointer; display: none; /* 載入完才顯示 */
-            animation: pulseBtn 1.5s infinite;
+            cursor: pointer; display: none; animation: pulseBtn 1.5s infinite;
             text-shadow: 1px 1px 2px #000;
         }
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
 
 
-        /* --- 遊戲內部 CSS (保持不變) --- */
+        /* --- 遊戲內部 CSS --- */
         #bg-video {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover; z-index: 0; 
-            filter: brightness(0.75);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: 0; filter: brightness(0.75);
             transition: filter 1.0s ease-in-out;
         }
         .free-mode #bg-video { filter: brightness(1.0); }
@@ -131,22 +109,18 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- 頂部按鈕參數 (V13.48 黃金參數) --- */
+        /* --- 按鈕參數 (鎖定不變) --- */
         .phone-button {
-            position: absolute; left: 2%; top: 2%; 
-            width: 9%; 
-            cursor: pointer; z-index: 950;
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+            position: absolute; left: 2%; top: 2%; width: 9%; 
+            cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
             transition: transform 0.1s;
         }
         .phone-button:active { transform: scale(0.9); }
 
         .buy-button {
-            position: absolute; left: 2%; 
-            top: 10.5%; 
-            width: 13%; 
-            cursor: pointer; z-index: 900;       
-            transition: transform 0.1s, filter 0.2s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+            position: absolute; left: 2%; top: 10.5%; width: 13%; 
+            cursor: pointer; z-index: 900; transition: transform 0.1s, filter 0.2s; 
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
         }
         .buy-button:hover { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.1); }
         .buy-button:active { transform: scale(0.92); }
@@ -258,7 +232,13 @@
             z-index: 1000; cursor: pointer; 
         }
 
-        @keyframes landBounce { 0% { transform: translateY(-15%); opacity: 1; } 50% { transform: translateY(12%); } 75% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
+        /* ★ V13.54 修正：減半回彈幅度 ★ */
+        @keyframes landBounce { 
+            0% { transform: translateY(-7.5%); opacity: 1; } 
+            50% { transform: translateY(6%); } 
+            75% { transform: translateY(-2%); } 
+            100% { transform: translateY(0); } 
+        }
 
         /* Free Game 報獎視窗 */
         #fg-end-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2500; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
@@ -350,7 +330,6 @@
     <div id="loading-layer">
         <div class="loading-container">
             <img src="loading.jpg" class="loading-visual">
-            
             <div class="loading-bottom-ui">
                 <div class="loading-text" id="loading-text">Loading... 0%</div>
                 <div class="progress-bar-bg">
@@ -1152,7 +1131,7 @@
                     await wait(2000); 
                     
                     AudioMgr.playSFX('stop');
-                    await wait(0);
+                    await wait(100);
 
                     colDiv.innerHTML = ''; 
                     targetSyms.forEach((type, r) => {
