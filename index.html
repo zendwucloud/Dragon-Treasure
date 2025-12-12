@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.49 最終完美版)</title>
+    <title>火龍祕寶 (V13.52 Loading完美定版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -15,6 +15,7 @@
             display: flex; justify-content: center; align-items: center;
             overflow: hidden; font-family: 'Arial', sans-serif;
             user-select: none; -webkit-user-select: none;
+            background-color: #000;
         }
 
         .stage {
@@ -24,8 +25,88 @@
             max-width: 100vw;
             aspect-ratio: 720/1280;
             background-color: transparent; 
+            opacity: 0; /* 預設隱藏，載入完才顯示 */
+            transition: opacity 0.5s ease-in;
+        }
+        .stage.loaded { opacity: 1; }
+
+        /* --- ★ V13.52 Loading Screen (修正版) ★ --- */
+        #loading-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            /* 移除黑色遮罩，直接透出 body 的 background.jpg */
+            background-color: transparent; 
+            z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease-out;
+        }
+        #loading-layer.hidden { opacity: 0; pointer-events: none; }
+
+        /* 建立一個跟遊戲舞台一樣大的容器，限制 Loading 內容範圍 */
+        .loading-container {
+            position: relative;
+            width: 100vh * 9 / 16; 
+            height: 100vh;
+            max-width: 100vw;
+            aspect-ratio: 720/1280;
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
         }
 
+        /* 主視覺海報 (滿版，靜止不動) */
+        .loading-visual {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; /* 完美填滿遊戲範圍 */
+            z-index: 0;
+            border-radius: 0; 
+            /* 移除動畫 animation: none; */
+        }
+
+        /* 底部區域 (限制在 loading-container 內，確保手機看得到) */
+        .loading-bottom-ui {
+            position: relative; 
+            z-index: 10; /* 在圖片上層 */
+            width: 85%; /* 寬度限制在 720 範圍的 85% */
+            margin-bottom: 8%; /* 距離底部的位置 */
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center;
+        }
+
+        .loading-text { 
+            font-family: 'Arial Black', sans-serif; 
+            color: #ffd700; 
+            font-size: 2.2vh; 
+            margin-bottom: 1.5vh; 
+            text-shadow: 0 0 5px #000, 0 0 10px #ff4500; 
+            letter-spacing: 1px; 
+        }
+        
+        .progress-bar-bg {
+            width: 100%; height: 1.5vh; 
+            background: rgba(0, 0, 0, 0.6); 
+            border: 2px solid #ffd700;
+            border-radius: 10px; overflow: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+        }
+        .progress-bar-fill {
+            width: 0%; height: 100%; 
+            background: linear-gradient(90deg, #ff4500, #ffff00);
+            box-shadow: 0 0 10px #ff4500;
+            transition: width 0.2s;
+        }
+
+        #btn-start-game {
+            margin-top: 3vh; padding: 1.5vh 6vh;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000);
+            border: 2px solid #ffd700; border-radius: 50px;
+            box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3);
+            cursor: pointer; display: none; /* 載入完才顯示 */
+            animation: pulseBtn 1.5s infinite;
+            text-shadow: 1px 1px 2px #000;
+        }
+        @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
+
+
+        /* --- 遊戲內部 CSS (保持不變) --- */
         #bg-video {
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
@@ -50,7 +131,7 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- 頂部按鈕參數 (您設定好的) --- */
+        /* --- 頂部按鈕參數 (V13.48 黃金參數) --- */
         .phone-button {
             position: absolute; left: 2%; top: 2%; 
             width: 9%; 
@@ -88,7 +169,7 @@
             z-index: 5; 
         }
         
-        /* ★ 關鍵修復：改回 2.0s 配合 JS，解決手機卡頓 ★ */
+        /* 時間 2.0s 配合 JS */
         .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
         
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
@@ -136,22 +217,19 @@
         .anim-scroll { animation: scrollPass 10s linear forwards; } @keyframes scrollPass { 0% { transform: translateX(100%); opacity: 0; } 15% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-150%); opacity: 1; } }
         .text-pop { transform: translateX(50%) scale(1.3) !important; } .text-pop-center { transform: scale(1.3) !important; }
         
-        /* Spin 按鈕 (保留您調好的位置) */
+        /* Spin 按鈕 & 旋轉動畫 (鎖定參數) */
         .spin-trigger { 
             position: absolute; 
             bottom: 11.6%; 
             left: 50%; 
             transform: translateX(-50%); 
-            
             width: 18.8%; 
             height: 11%;
-            
             border-radius: 50%; 
             cursor: pointer; 
             z-index: 999; 
             display: flex; justify-content: center; align-items: center; 
-            
-            background-color: rgba(255, 0, 0, 0); /* 關閉紅光 */
+            background-color: rgba(255, 0, 0, 0); 
         }
         #spin-icon {
             width: 130%; height: 130%; object-fit: contain;
@@ -163,10 +241,10 @@
         @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
         @keyframes spinFast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
 
-        /* 底部按鈕參數 (關閉紅光) */
+        /* 底部按鈕參數 (鎖定且透明) */
         .click-area { 
             position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; 
-            background-color: rgba(255, 0, 0, 0); /* 關閉紅光 */
+            background-color: rgba(255, 0, 0, 0); 
             width: 3.8vh; height: 3.8vh; 
         }
         #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
@@ -175,7 +253,7 @@
         #btn-auto { 
             position: absolute; right: 40.5%; bottom: 7.5%; 
             width: 10vh; height: 2vh; 
-            background-color: rgba(255, 0, 0, 0); /* 關閉紅光 */
+            background-color: rgba(255, 0, 0, 0); 
             border: 0px solid red; border-radius: 50%; 
             z-index: 1000; cursor: pointer; 
         }
@@ -198,7 +276,7 @@
         
         .menu-click-area { 
             position: absolute; 
-            background-color: rgba(255, 0, 0, 0); /* 關閉紅光 */
+            background-color: rgba(255, 0, 0, 0); 
             border: 0px solid red; cursor: pointer; 
         }
         #btn-menu-info { left: 14%; top: 23%; width: 13%; height: 9%; }
@@ -269,7 +347,21 @@
 </head>
 <body>
 
-    <div class="stage">
+    <div id="loading-layer">
+        <div class="loading-container">
+            <img src="loading.jpg" class="loading-visual">
+            
+            <div class="loading-bottom-ui">
+                <div class="loading-text" id="loading-text">Loading... 0%</div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <div id="btn-start-game">★ 點擊開始遊戲 ★</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stage" id="game-stage">
         <video id="bg-video" autoplay loop muted playsinline>
             <source src="火龍背景_待機.mp4" type="video/mp4">
         </video>
@@ -391,6 +483,7 @@
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
+            // ★ 解鎖音效的函式
             init: function() {
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
                 const bgmMain = document.getElementById('bgm_main');
@@ -398,33 +491,26 @@
                 if(bgmMain) bgmMain.volume = 0.8;
                 if(bgmFree) bgmFree.volume = 1.0;
                 
-                const unlock = () => {
-                    document.querySelectorAll('audio').forEach(a => {
-                        if (a.id !== 'bgm_main' && a.id !== 'bgm_free') {
-                            a.volume = 0;           
-                            a.play().catch(()=>{}); 
-                            setTimeout(() => { 
-                                a.pause();          
-                                a.currentTime = 0; 
-                                a.volume = 1.0;     
-                            }, 50);
-                        }
-                    });
+                // 嘗試播放所有音效一小段，然後暫停 (強制解鎖 AudioContext)
+                document.querySelectorAll('audio').forEach(a => {
+                    a.volume = 0;           
+                    a.play().catch(()=>{}); 
+                    setTimeout(() => { 
+                        a.pause();          
+                        a.currentTime = 0; 
+                        a.volume = 1.0;     
+                    }, 50);
+                });
 
-                    if (this.enabled) {
-                        let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
-                        let bgm = document.getElementById(bgmId);
-                        if(bgm) {
-                            bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
-                            bgm.play().catch(()=>{});
-                        }
+                // 開始播放背景音樂
+                if (this.enabled) {
+                    let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
+                    let bgm = document.getElementById(bgmId);
+                    if(bgm) {
+                        bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
+                        bgm.play().catch(()=>{});
                     }
-                    document.body.removeEventListener('click', unlock);
-                    document.body.removeEventListener('touchstart', unlock);
-                };
-
-                document.body.addEventListener('click', unlock);
-                document.body.addEventListener('touchstart', unlock);
+                }
             },
             
             playBGM: function(type) {
@@ -474,7 +560,6 @@
                 }
             }
         };
-        window.addEventListener('load', () => { AudioMgr.init(); });
     </script>
 
     <script>
@@ -565,15 +650,77 @@
         let gridData = []; let isSpinning = false; let score = 0; 
         let promoInterval = null;
 
+        // ★ 新增：資源預載邏輯 (Loader)
         window.onload = () => {
-            const preloadImages = [
+            const imageAssets = [
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
                 "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
                 "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png",
-                "you-win.png", "phone.png", "gui-top.png", "spin.png"
+                "you-win.png", "phone.png", "gui-top.png", "spin.png",
+                "background.jpg", "UI.png", "buy_btn.png", "SCATTER.png", "WILD.png", "WILD_word.png", "SCATTER_word.png",
+                "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png",
+                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg"
             ];
-            preloadImages.forEach(src => new Image().src = src);
+            
+            const audioAssets = [
+                "bgm_main.mp3", "bgm_free.mp3", "sfx_spin.mp3", "sfx_stop.mp3", 
+                "sfx_win.mp3", "sfx_win_free.mp3", "sfx_bigwin.mp3", "sfx_scatter.mp3", 
+                "sfx_click.mp3", "sfx_dragon.mp3", "you-win.mp3"
+            ];
 
+            let totalAssets = imageAssets.length + audioAssets.length;
+            let loadedCount = 0;
+
+            const updateProgress = () => {
+                loadedCount++;
+                let percent = Math.floor((loadedCount / totalAssets) * 100);
+                document.getElementById('loading-text').innerText = `Loading... ${percent}%`;
+                document.getElementById('progress-fill').style.width = `${percent}%`;
+
+                if (loadedCount >= totalAssets) {
+                    document.getElementById('loading-text').innerText = "載入完成！";
+                    document.getElementById('btn-start-game').style.display = 'block';
+                }
+            };
+
+            // 載入圖片
+            imageAssets.forEach(src => {
+                const img = new Image();
+                img.onload = updateProgress;
+                img.onerror = updateProgress; 
+                img.src = src;
+            });
+
+            // 載入音效 (簡單請求)
+            audioAssets.forEach(src => {
+                const aud = new Audio();
+                aud.oncanplaythrough = updateProgress;
+                aud.onerror = updateProgress;
+                aud.src = src;
+                // 有些瀏覽器不預載 Audio，為了不卡死，我們設個 timeout 強制完成
+                setTimeout(updateProgress, 2000); 
+            });
+        };
+
+        // ★ 新增：點擊開始遊戲按鈕 (解鎖音效 + 進入遊戲)
+        document.getElementById('btn-start-game').addEventListener('click', () => {
+            // 1. 隱藏 Loading 層
+            const loadingLayer = document.getElementById('loading-layer');
+            loadingLayer.classList.add('hidden');
+            setTimeout(() => loadingLayer.style.display = 'none', 500);
+
+            // 2. 顯示遊戲舞台
+            document.getElementById('game-stage').classList.add('loaded');
+
+            // 3. 初始化音效 (這是解鎖的關鍵！)
+            AudioMgr.init();
+
+            // 4. 執行原本的遊戲初始化
+            initGameLogic();
+        });
+
+        // 將原本的 window.onload 裡的邏輯移到這裡
+        function initGameLogic() {
             initGrid(); fillRandom(false); updateAllUI(); 
             
             document.getElementById('btn-phone').addEventListener('click', () => {
@@ -610,65 +757,61 @@
                 AudioMgr.toggle(e.target.checked);
             });
 
-            setTimeout(() => {
-                // --- 新增：購買視窗的按鈕事件 ---
-                document.getElementById('btn-buy-cancel').addEventListener('click', () => {
-                    AudioMgr.playSFX('click');
-                    document.getElementById('buy-modal').classList.remove('active');
-                });
+            // 購買視窗按鈕
+            document.getElementById('btn-buy-cancel').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('buy-modal').classList.remove('active');
+            });
 
-                document.getElementById('btn-buy-confirm').addEventListener('click', () => {
-                    AudioMgr.playSFX('click');
-                    document.getElementById('buy-modal').classList.remove('active');
-                    // 執行真正的購買邏輯
-                    executeBuy(); 
-                });
+            document.getElementById('btn-buy-confirm').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('buy-modal').classList.remove('active');
+                executeBuy(); 
+            });
 
-                document.getElementById('spinBtn').addEventListener('click', () => {
-                    handleFirstInteraction();
-                    if (isAutoPlay) {
-                        isAutoPlay = false;
-                        return; 
-                    }
-                    
-                    document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active'));
+            document.getElementById('spinBtn').addEventListener('click', () => {
+                handleFirstInteraction();
+                if (isAutoPlay) {
+                    isAutoPlay = false;
+                    return; 
+                }
+                document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active'));
+                AudioMgr.playSFX('click');
+                startSpin();
+            });
+
+            document.getElementById('btn-auto').addEventListener('click', (e) => {
+                handleFirstInteraction();
+                e.stopPropagation(); 
+                if (isSpinning || gameData.isFreeGame) return;
+
+                isAutoPlay = !isAutoPlay; 
+                if(isAutoPlay) {
                     AudioMgr.playSFX('click');
                     startSpin();
-                });
+                }
+            });
 
-                document.getElementById('btn-auto').addEventListener('click', (e) => {
-                    handleFirstInteraction();
-                    e.stopPropagation(); 
-                    if (isSpinning || gameData.isFreeGame) return;
+            document.addEventListener('click', (e) => {
+                if (isAutoPlay && e.target.id !== 'btn-auto') {
+                    isAutoPlay = false;
+                }
+            }, true); 
 
-                    isAutoPlay = !isAutoPlay; 
-                    if(isAutoPlay) {
-                        AudioMgr.playSFX('click');
-                        startSpin();
-                    }
-                });
-
-                document.addEventListener('click', (e) => {
-                    if (isAutoPlay && e.target.id !== 'btn-auto') {
-                        isAutoPlay = false;
-                    }
-                }, true); 
-
-                document.getElementById('btn-plus').addEventListener('click', () => {
-                     AudioMgr.playSFX('click'); changeBet(100);
-                });
-                document.getElementById('btn-minus').addEventListener('click', () => {
-                     AudioMgr.playSFX('click'); changeBet(-100);
-                });
-                document.getElementById('btn-buy').addEventListener('click', () => {
-                    handleFirstInteraction();
-                    AudioMgr.playSFX('click');
-                    buyFeature();
-                });
-                
-                showPromoMessage(); startPromoLoop();
-            }, 100);
-        };
+            document.getElementById('btn-plus').addEventListener('click', () => {
+                    AudioMgr.playSFX('click'); changeBet(100);
+            });
+            document.getElementById('btn-minus').addEventListener('click', () => {
+                    AudioMgr.playSFX('click'); changeBet(-100);
+            });
+            document.getElementById('btn-buy').addEventListener('click', () => {
+                handleFirstInteraction();
+                AudioMgr.playSFX('click');
+                buyFeature();
+            });
+            
+            showPromoMessage(); startPromoLoop();
+        }
 
         function generatePaytable() {
             const container = document.getElementById('paytable-container');
@@ -1005,7 +1148,7 @@
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
-                    /* ★ V13.49 修正：JS 等待時間設為 2000ms，配合 CSS 的 2.0s */
+                    /* ★ V13.52: JS 時間設定為 2000ms，配合 CSS 2.0s */
                     await wait(2000); 
                     
                     AudioMgr.playSFX('stop');
