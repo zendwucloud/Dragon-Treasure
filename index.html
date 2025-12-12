@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>火龍祕寶 (V13.42 Autoplay歸位+大圖示版)</title>
+    <style>
+        /* --- 1. 基礎設定 --- */
+        body {
+            background-image: url('background.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin: 0; height: 100vh; width: 100vw;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; font-family: 'Arial', sans-serif;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        .stage {
+            position: relative;
+            width: 100vh * 9 / 16; 
+            height: 100vh;
+            max-width: 100vw;
+            aspect-ratio: 720/1280;
+            background-color: transparent; 
+        }
+
+        #bg-video {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; z-index: 0; 
+            filter: brightness(0.75);
+            transition: filter 1.0s ease-in-out;
+        }
+        .free-mode #bg-video { filter: brightness(1.0); }
+        .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
+
+        .fire-effect {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5; opacity: 0;
+            transition: opacity 1s ease-in-out;
+            box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); mix-blend-mode: overlay; 
+        }
+        .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
+        @keyframes firePulse {
+            0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); }
+            100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); }
+        }
+
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('UI.png'); 
+            background-size: 100% 100%; background-position: center; background-repeat: no-repeat;
+            z-index: 1; pointer-events: none;
+        }
+
+        .sound-toggle { display: none; }
+
+        .phone-button {
+            position: absolute; left: 2%; top: 2%; 
+            width: 9%; 
+            cursor: pointer; z-index: 950;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+            transition: transform 0.1s;
+        }
+        .phone-button:active { transform: scale(0.9); }
+
+        .buy-button {
+            position: absolute; left: 2%; 
+            top: 10.5%; 
+            width: 13%; 
+            cursor: pointer; z-index: 900;       
+            transition: transform 0.1s, filter 0.2s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+        }
+        .buy-button:hover { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.1); }
+        .buy-button:active { transform: scale(0.92); }
+        .free-mode .buy-button { display: none; }
+
+        .reel-viewport {
+            position: absolute; top: 21.95%; left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10;
+        }
+        .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; padding: 0; overflow: visible; }
+        .column { position: relative; width: 18.89%; height: 100%; display: block; z-index: 1; transition: box-shadow 0.3s; }
+        .reel-strip { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column-reverse; will-change: transform; transform: translateY(0); z-index: 5; }
+        .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        .reel-strip.moving.blur { filter: blur(4px); }
+        .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
+        .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; }
+        .column > .symbol { position: absolute; height: 33.333%; left: 0; transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1.3); }
+        .symbol[data-row="0"] { bottom: 0; } .symbol[data-row="1"] { bottom: 33.333%; } .symbol[data-row="2"] { bottom: 66.666%; }
+
+        /* SCATTER & WILD CSS */
+        .sym-scatter { background-image: url('SCATTER.png'); width: 115%; height: 100%; background-position: 0% 0%; background-size: 100% 100%; background-repeat: no-repeat; margin-left: -7.5%; left: 0; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
+        @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; background-position: 0% 0%; transition: none !important; will-change: background-position; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
+        .sym-scatter.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('SCATTER_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
+        .ghost-layer { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0.001; z-index: -999; pointer-events: none; }
+        .ghost-layer .sym-scatter.active { animation-play-state: running !important; }
+        @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
+        .sym-1.active { background-image: url('s1_sprite.png') !important; } .sym-2.active { background-image: url('s2_sprite.png') !important; } .sym-3.active { background-image: url('s3_sprite.png') !important; } .sym-4.active { background-image: url('s4_sprite.png') !important; } .sym-5.active { background-image: url('s5_sprite.png') !important; }
+        .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 600 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
+        .sym-mul.active::after { content: ""; position: absolute; width: 110%; left: -5%; height: 40%; bottom: 2%; background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 605; animation: wildPop 0.8s ease-in-out infinite alternate; }
+        .sym-20.active::after { background-image: url('x2_word.png'); } .sym-21.active::after { background-image: url('x10_word.png'); } .sym-22.active::after { background-image: url('x25_word.png'); } .sym-23.active::after { background-image: url('x100_word.png'); }
+        .sym-wild { background-image: url('WILD.png'); width: 115%; height: 100%; background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; margin-left: -7.5%; left: 0; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
+        .sym-wild.active { background-image: url('dragon_sprite.png'); background-size: 2800% 100%; background-position: 0 0; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; }
+        .sym-wild.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('WILD_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
+        @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
+        .sym-mul { z-index: 150; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; }
+        .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
+        @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
+        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; } .sym-wild.anim-win, .sym-wild.active, .sym-scatter.anim-win { z-index: 600 !important; }
+        @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
+        .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
+
+        /* UI 文字 */
+        .value-text { color: #fff; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 2px 2px 2px #000; position: absolute; z-index: 500; pointer-events: none; white-space: nowrap; }
+        #ui-credit { bottom: 7.6%; left: 16%; transform: translateX(-50%); font-size: 2.2vh; text-align: center; }
+        #ui-bet { bottom: 7.6%; right: 14%; transform: translateX(50%); font-size: 2.2vh; text-align: center; }
+        #ui-win { bottom: 3.3%; left: 38%; margin-left: 1.5vh; transform: none; text-align: left; font-size: 3.5vh; color: #fff; text-shadow: 0 0 10px #ffcc00, 2px 2px 0 #000; }
+        #ui-free-spins, #ui-multiplier { display: none !important; }
+        #ui-message-bar { position: absolute; bottom: 26.7%; left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
+        #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
+        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
+        .style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
+        .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
+        .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } @keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .anim-scroll { animation: scrollPass 10s linear forwards; } @keyframes scrollPass { 0% { transform: translateX(100%); opacity: 0; } 15% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-150%); opacity: 1; } }
+        .text-pop { transform: translateX(50%) scale(1.3) !important; } .text-pop-center { transform: scale(1.3) !important; }
+        
+        /* Spin 按鈕 & 旋轉動畫 */
+        .spin-trigger { 
+            position: absolute; bottom: 7.7%; left: 50%; transform: translateX(-50%); 
+            width: 18.8%; height: 18.8%; border-radius: 50%; cursor: pointer; z-index: 999; 
+            display: flex; justify-content: center; align-items: center; /* 讓內部圖片居中 */
+        }
+        #spin-icon {
+            /* ★ V13.42 修改：放大圖示至 130% */
+            width: 130%; height: 130%; object-fit: contain;
+            /* 待機狀態 20秒 一圈 (緩慢) */
+            animation: spinSlow 20s linear infinite; 
+        }
+        #spin-icon.fast {
+            /* 旋轉狀態 0.5秒 一圈 (快速) */
+            animation: spinFast 0.5s linear infinite !important; 
+        }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
+        @keyframes spinFast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
+
+        .click-area { position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; background-color: transparent; width: 7vh; height: 7vh; }
+        #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
+        #btn-plus { right: 33.4%; bottom: 8.8%; transform: translateX(50%); }
+        
+        /* ★ V13.42 修正：Autoplay 歸位 (40.5% / 7.5%) ★ */
+        #btn-auto { 
+            position: absolute; 
+            right: 40.5%; 
+            bottom: 7.5%; 
+            width: 10vh; /* 寬度配合圖示 */
+            height: 2vh; /* 高度配合圖示 */
+            background-color: rgba(0, 0, 0, 0); /* 紅色半透明 */
+            border: 0px solid red; 
+            border-radius: 50%; 
+            z-index: 1000; 
+            cursor: pointer; 
+        }
+
+        @keyframes landBounce { 0% { transform: translateY(-15%); opacity: 1; } 50% { transform: translateY(12%); } 75% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
+
+        /* Free Game 報獎視窗 */
+        #fg-end-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2500; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
+        #fg-end-modal.active { opacity: 1; pointer-events: auto; }
+        #fg-end-modal.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
+        #fg-end-modal .content-wrapper { text-align: center; position: relative; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; width: 100%; }
+        #fg-end-modal .win-title { width: 80%; height: auto; display: block; margin: 0 auto 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
+        #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: 11vh; color: #FFFF00; margin-top: -3vh; text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000, -2px -2px 0 #ff3000, 2px -2px 0 #ff3000, -2px 2px 0 #ff3000, 6px 6px 0 #850000, 8px 8px 5px rgba(0,0,0,0.5); letter-spacing: 2px; white-space: nowrap; transition: font-size 0.3s ease-out; }
+        @keyframes popIn { 0% { transform: scale(0) translateY(-10%); } 100% { transform: scale(1) translateY(-10%); } }
+
+        /* 底部滑出選單 (Menu) */
+        #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; z-index: 2400; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #menu-modal.active { bottom: 0; }
+        #menu-bg { width: 100%; display: block; }
+        .menu-click-area { position: absolute; background-color: rgba(0, 0, 0, 0); border: 0px solid red; cursor: pointer; }
+        #btn-menu-info { left: 14%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-setting { left: 33%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-home { left: 52%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-close-bottom { left: 38.5%; bottom: 1%; width: 23%; height: 5%; }
+
+        /* 說明頁 (Info Modal) - 整合版樣式 */
+        #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        #info-modal.active { display: flex; opacity: 1; }
+        .info-content { 
+            background: linear-gradient(180deg, #6a0dad 0%, #3a005f 100%); 
+            width: 90%; height: 80%; border-radius: 20px; border: 2px solid #8a2be2; 
+            padding: 20px; overflow-y: auto; text-align: center; color: #fff; 
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); 
+            padding-right: 15px;
+        }
+        .info-content::-webkit-scrollbar { width: 12px; }
+        .info-content::-webkit-scrollbar-track { background: transparent; margin-block: 10px; }
+        .info-content::-webkit-scrollbar-thumb { background-color: rgba(255, 215, 0, 0.6); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+        .info-content::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 215, 0, 1.0); }
+        .info-title { font-size: 3vh; color: #7cfc00; margin-bottom: 2vh; text-shadow: 0 0 5px #000; }
+        .paytable-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
+        .paytable-item { background: rgba(40, 10, 60, 0.6); border: 1px solid #9932cc; border-radius: 10px; padding: 5px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; height: 14vh; box-shadow: inset 0 0 10px rgba(138, 43, 226, 0.2); }
+        .paytable-item img { width: auto; height: 85%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+        .paytable-info { width: 56%; display: flex; flex-direction: column; justify-content: center; padding-right: 2px; }
+        .paytable-row { display: flex; justify-content: space-between; align-items: center; width: 100%; line-height: 1.2; font-family: 'Arial Black', sans-serif; font-size: 3.6vh; }
+        .paytable-mul { color: #fff; font-weight: bold; }
+        .paytable-val { color: #ffd700; text-align: right; text-shadow: 1px 1px 0 #000; }
+        .special-rule-block { grid-column: 1 / -1; background: linear-gradient(90deg, #2e004d 0%, #1a0b2e 100%); border: 2px solid #fff; border-radius: 12px; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding: 8px 12px; margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); min-height: 14vh; }
+        .special-fixed-height { height: 14vh; }
+        .special-img { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-right: 4%; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 2%; height: 100%; }
+        .special-img img { width: auto; height: 85%; object-fit: contain; }
+        .special-text { width: 76%; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        .rule-title { font-family: 'Arial Black', sans-serif; font-size: 2.0vh; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px; text-transform: uppercase; }
+        .desc-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.5vh; font-weight: bold; color: #ddd; border-bottom: 1px dashed rgba(255,255,255,0.15); padding: 3px 0; }
+        .desc-row:last-child { border-bottom: none; }
+        .c-yellow { color: #ffd700; } .c-cyan { color: #00ffff; } .c-red { color: #ff4500; text-shadow: 0 0 2px #ff0000; } .c-white { color: #ffffff; } .c-gray { color: #aaaaaa; font-size: 1.3vh; }
+        .close-btn { margin-top: 20px; background-color: #00bfff; padding: 10px 30px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #008080; }
+        .close-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008080; }
+
+        /* 設定頁 (Setting Modal) */
+        #setting-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2600; display: none; align-items: center; justify-content: center; }
+        #setting-modal.active { display: flex; }
+        .setting-box { width: 80%; background: #9370db; border-radius: 15px; border: 3px solid #4b0082; padding: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; margin: 20px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #ffd700; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* 規則文字區 */
+        .rules-container { margin-top: 15px; text-align: left; padding: 10px 5px; border-top: 1px solid rgba(255,255,255,0.3); }
+        .rules-list { list-style-type: none; padding: 0; margin: 0; font-size: 1.5vh; color: #f0f0f0; line-height: 1.6; }
+        .rules-list li { margin-bottom: 8px; padding-left: 10px; border-left: 3px solid #ffd700; }
+        .rules-list strong { color: #fff; font-weight: 900; margin-right: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="stage">
+        <video id="bg-video" autoplay loop muted playsinline>
+            <source src="火龍背景_待機.mp4" type="video/mp4">
+        </video>
+
+        <div class="ui-layer"></div>
+        <div class="fire-effect"></div>
+        
+        <img id="btn-phone" src="phone.png" class="phone-button">
+        <img id="btn-buy" src="buy_btn.png" class="buy-button">
+        
+        <div class="reel-viewport">
+            <div class="grid-container" id="grid"></div>
+        </div>
+
+        <div id="ui-credit" class="value-text">100,000.00</div>
+        <div id="ui-win" class="value-text">0.00</div>
+        <div id="ui-bet" class="value-text">100.00</div>
+        <div id="ui-message-bar"><div id="msg-content">WIN 100.00</div></div>
+        
+        <div id="ui-multiplier" class="value-text">x1</div>
+        <div id="ui-free-spins" class="value-text">FREE SPINS: 0</div>
+
+        <div class="click-area" id="btn-minus"></div>
+        <div class="click-area" id="btn-plus"></div>
+        <div class="click-area" id="btn-auto"></div>
+        
+        <div class="spin-trigger" id="spinBtn">
+            <img id="spin-icon" src="spin.png"> 
+        </div>
+
+        <div class="ghost-layer">
+            <div class="symbol sym-scatter active"></div>
+        </div>
+
+        <div id="fg-end-modal">
+            <div class="content-wrapper">
+                <img src="you-win.png" class="win-title">
+                <div id="fg-end-score">0.00</div>
+            </div>
+        </div>
+
+        <div id="menu-modal">
+            <img id="menu-bg" src="gui-top.png">
+            <div id="btn-menu-info" class="menu-click-area"></div>
+            <div id="btn-menu-setting" class="menu-click-area"></div>
+            <div id="btn-menu-home" class="menu-click-area"></div>
+            <div id="btn-menu-close-bottom" class="menu-click-area"></div>
+        </div>
+
+        <div id="info-modal">
+            <div class="info-content">
+                <div class="info-title">★ 遊戲賠率表 ★</div>
+                <div class="paytable-grid" id="paytable-container"></div>
+                <div class="close-btn" id="btn-close-info">關閉</div>
+            </div>
+        </div>
+
+        <div id="setting-modal">
+            <div class="setting-box">
+                <div class="info-title">設定</div>
+                <div style="color: white; font-weight: bold;">音樂/音效</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-sound" checked>
+                    <span class="slider"></span>
+                </label>
+                <div class="close-btn" id="btn-close-setting" style="margin-top: 10px;">確定</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="audio-pool" style="display:none;">
+        <audio id="bgm_main" src="bgm_main.mp3" loop></audio>
+        <audio id="bgm_free" src="bgm_free.mp3" loop></audio>
+        <audio id="sfx_spin_1" src="sfx_spin.mp3"></audio>
+        <audio id="sfx_spin_2" src="sfx_spin.mp3"></audio>
+        <audio id="sfx_spin_3" src="sfx_spin.mp3"></audio>
+        <audio id="sfx_stop_1" src="sfx_stop.mp3"></audio>
+        <audio id="sfx_stop_2" src="sfx_stop.mp3"></audio>
+        <audio id="sfx_stop_3" src="sfx_stop.mp3"></audio>
+        <audio id="sfx_win_1" src="sfx_win.mp3"></audio>
+        <audio id="sfx_win_2" src="sfx_win.mp3"></audio>
+        <audio id="sfx_win_3" src="sfx_win.mp3"></audio>
+        <audio id="sfx_win_free_1" src="sfx_win_free.mp3"></audio>
+        <audio id="sfx_win_free_2" src="sfx_win_free.mp3"></audio>
+        <audio id="sfx_win_free_3" src="sfx_win_free.mp3"></audio>
+        <audio id="sfx_bigwin_1" src="sfx_bigwin.mp3"></audio>
+        <audio id="sfx_bigwin_2" src="sfx_bigwin.mp3"></audio>
+        <audio id="sfx_bigwin_3" src="sfx_bigwin.mp3"></audio>
+        <audio id="sfx_scatter_1" src="sfx_scatter.mp3"></audio>
+        <audio id="sfx_scatter_2" src="sfx_scatter.mp3"></audio>
+        <audio id="sfx_scatter_3" src="sfx_scatter.mp3"></audio>
+        <audio id="sfx_click_1" src="sfx_click.mp3"></audio>
+        <audio id="sfx_click_2" src="sfx_click.mp3"></audio>
+        <audio id="sfx_click_3" src="sfx_click.mp3"></audio>
+        <audio id="sfx_dragon_1" src="sfx_dragon.mp3"></audio>
+        <audio id="sfx_dragon_2" src="sfx_dragon.mp3"></audio>
+        <audio id="sfx_dragon_3" src="sfx_dragon.mp3"></audio>
+        <audio id="sfx_youWin_1" src="you-win.mp3"></audio>
+    </div>
+
+    <script>
+        const AudioMgr = {
+            enabled: true,
+            currentBGM: null,
+            poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
+
+//背景音樂音量調整
+            init: function() {
+                document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
+                document.getElementById('bgm_main').volume = 0.8;
+                document.getElementById('bgm_free').volume = 1;
+                
+                const unlock = () => {
+                    if (this.enabled) {
+                        if(gameData.isFreeGame) this.playBGM('free');
+                        else this.playBGM('main');
+                    }
+                    document.body.removeEventListener('click', unlock);
+                    document.body.removeEventListener('touchstart', unlock);
+                };
+                document.body.addEventListener('click', unlock);
+                document.body.addEventListener('touchstart', unlock);
+            },
+            
+            playBGM: function(type) {
+                if (!this.enabled) return;
+                document.getElementById('bgm_main').pause();
+                document.getElementById('bgm_free').pause();
+                
+                let target = document.getElementById(type === 'free' ? 'bgm_free' : 'bgm_main');
+                target.play().catch(()=>{});
+            },
+
+            playSFX: function(name) {
+                if (!this.enabled) return;
+                
+                let key = name;
+                if(name === 'winFree') key = 'win_free';
+                if(name === 'bigWin') key = 'bigwin';
+
+                if (!this.poolIndices[key]) this.poolIndices[key] = 1;
+
+                let idx = this.poolIndices[key];
+                let id = `sfx_${key}_${idx}`;
+                let audio = document.getElementById(id);
+
+                if (!audio) {
+                    console.warn(`Audio Channel Missing: ${id}. Fallback to Channel 1.`);
+                    audio = document.getElementById(`sfx_${key}_1`);
+                }
+
+                if (audio) {
+                    audio.currentTime = 0;
+                    audio.play().catch(()=>{});
+                    this.poolIndices[key] = (idx % 3) + 1; 
+                }
+            },
+
+            toggle: function(state) {
+                this.enabled = state;
+                if(!this.enabled) {
+                    document.querySelectorAll('audio').forEach(a => a.pause());
+                } else {
+                    if(gameData.isFreeGame) this.playBGM('free');
+                    else this.playBGM('main');
+                }
+            }
+        };
+        window.addEventListener('load', () => { AudioMgr.init(); });
+    </script>
+
+    <script>
+        const config = { cols: 5, rows: 3 }; 
+        
+        const SYMBOLS = {
+            1:  { type: 'high', payouts: {3: 3, 4: 10, 5: 30},  weight: 8, inBase: true, inFree: true }, 
+            2:  { type: 'high', payouts: {3: 2.5, 4: 8, 5: 25}, weight: 10, inBase: true, inFree: true },
+            3:  { type: 'high', payouts: {3: 2, 4: 6, 5: 20},   weight: 12, inBase: true, inFree: true },
+            4:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
+            5:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
+            6:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
+            7:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
+            8:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
+            9:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
+            10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
+            11: { type: 'scatter', weight: 2.5, inBase: true, inFree: true }, 
+            20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
+            21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
+            22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
+            23: { type: 'mul', val: 100, weight: 0, inBase: false, inFree: true }  
+        };
+
+        let poolBase = []; 
+        let poolFree = []; 
+        let totalWeightBase = 0; 
+        let totalWeightFree = 0;
+        let isBuyingFeature = false; 
+        let buyTriggerType = 0; 
+        let firstInteraction = false;
+        
+        let isAutoPlay = false;
+
+        function initBasePool() {
+            poolBase = [];
+            totalWeightBase = 0;
+            for (let id in SYMBOLS) {
+                let s = SYMBOLS[id];
+                let numId = parseInt(id);
+                if (s.inBase) {
+                    poolBase.push({ id: numId, weight: s.weight });
+                    totalWeightBase += s.weight;
+                }
+            }
+        }
+        initBasePool(); 
+
+        function updateFreeGameWeights(scatterCount) {
+            poolFree = [];
+            totalWeightFree = 0;
+            const targetTotalWeight = 1000;
+            const symbolQuota = 750; 
+            const multiplierQuota = 250; 
+
+            let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
+            let originalSum = 0;
+            connectableSymbols.forEach(id => { originalSum += SYMBOLS[id].weight; });
+            
+            connectableSymbols.forEach(id => {
+                let s = SYMBOLS[id];
+                let w = (s.weight / originalSum) * symbolQuota;
+                if (id <= 3) w *= 0.3; 
+                if (id === 4 || id === 5) w *= 1.2; 
+                if (id === 10) w *= 0.55; 
+                if (scatterCount === 3 && id === 10) w *= 1.2; 
+                if (id === 11) w = 0.1; 
+
+                poolFree.push({ id: id, weight: w });
+                totalWeightFree += w;
+            });
+
+            let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
+            
+            if (scatterCount === 3) {
+                w2 = multiplierQuota * 0.95; w10 = multiplierQuota * 0.05;
+            } else if (scatterCount === 4) {
+                w2 = multiplierQuota * 0.90; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.02;
+            } else {
+                w2 = multiplierQuota * 0.88; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.038; w100 = multiplierQuota * 0.002;
+            }
+            if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
+            if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
+            if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
+            if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
+        }
+
+        let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
+        let gridData = []; let isSpinning = false; let score = 0; 
+        let promoInterval = null;
+
+        window.onload = () => {
+            const preloadImages = [
+                "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
+                "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
+                "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png",
+                "you-win.png", "phone.png", "gui-top.png", "spin.png" // ★ V13.40 加入 spin.png
+            ];
+            preloadImages.forEach(src => new Image().src = src);
+
+            initGrid(); fillRandom(false); updateAllUI(); 
+            
+            document.getElementById('btn-phone').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('menu-modal').classList.add('active');
+            });
+            document.getElementById('btn-menu-info').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                generatePaytable();
+                document.getElementById('info-modal').classList.add('active');
+            });
+            document.getElementById('btn-menu-setting').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('setting-modal').classList.add('active');
+            });
+            document.getElementById('btn-menu-home').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('menu-modal').classList.remove('active');
+            });
+            document.getElementById('btn-menu-close-bottom').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('menu-modal').classList.remove('active');
+            });
+
+            document.getElementById('btn-close-info').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('info-modal').classList.remove('active');
+            });
+            document.getElementById('btn-close-setting').addEventListener('click', () => {
+                AudioMgr.playSFX('click');
+                document.getElementById('setting-modal').classList.remove('active');
+            });
+            document.getElementById('chk-sound').addEventListener('change', (e) => {
+                AudioMgr.toggle(e.target.checked);
+            });
+
+            setTimeout(() => {
+                document.getElementById('spinBtn').addEventListener('click', () => {
+                    handleFirstInteraction();
+                    if (isAutoPlay) {
+                        isAutoPlay = false;
+                        return; 
+                    }
+                    
+                    document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active'));
+                    AudioMgr.playSFX('click');
+                    startSpin();
+                });
+
+                document.getElementById('btn-auto').addEventListener('click', (e) => {
+                    handleFirstInteraction();
+                    e.stopPropagation(); 
+                    if (isSpinning || gameData.isFreeGame) return;
+
+                    isAutoPlay = !isAutoPlay; 
+                    if(isAutoPlay) {
+                        AudioMgr.playSFX('click');
+                        startSpin();
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (isAutoPlay && e.target.id !== 'btn-auto') {
+                        isAutoPlay = false;
+                    }
+                }, true); 
+
+                document.getElementById('btn-plus').addEventListener('click', () => {
+                     AudioMgr.playSFX('click'); changeBet(100);
+                });
+                document.getElementById('btn-minus').addEventListener('click', () => {
+                     AudioMgr.playSFX('click'); changeBet(-100);
+                });
+                document.getElementById('btn-buy').addEventListener('click', () => {
+                    handleFirstInteraction();
+                    AudioMgr.playSFX('click');
+                    buyFeature();
+                });
+                
+                showPromoMessage(); startPromoLoop();
+            }, 100);
+        };
+
+        function generatePaytable() {
+            const container = document.getElementById('paytable-container');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= 9; i++) {
+                let s = SYMBOLS[i];
+                let imgName = `s${i}.png`;
+                
+                let html = `<div class="paytable-item">`;
+                html += `<img src="${imgName}">`; 
+                html += `<div class="paytable-info">`; 
+                
+                if (s.payouts[5]) html += `<div class="paytable-row"><span class="paytable-mul">5x</span><span class="paytable-val">${s.payouts[5]}</span></div>`;
+                if (s.payouts[4]) html += `<div class="paytable-row"><span class="paytable-mul">4x</span><span class="paytable-val">${s.payouts[4]}</span></div>`;
+                if (s.payouts[3]) html += `<div class="paytable-row"><span class="paytable-mul">3x</span><span class="paytable-val">${s.payouts[3]}</span></div>`;
+                
+                html += `</div></div>`;
+                container.innerHTML += html;
+            }
+
+            let wildHtml = `
+            <div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);">
+                <div class="special-img">
+                    <img src="WILD.png">
+                    <div class="c-red" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">WILD</div>
+                </div>
+                <div class="special-text">
+                    <div class="rule-title" style="color:#ff4500;">百搭符號 (WILD)</div>
+                    <div style="font-size:1.4vh; color:#fff; line-height:1.5;">
+                        ● 可替代 <span class="c-cyan">SCATTER</span> 與 <span class="c-yellow">龍眼</span> 以外的所有符號。<br>
+                        ● 僅出現在第 2, 3, 4, 5 卷軸。
+                    </div>
+                </div>
+            </div>`;
+            container.innerHTML += wildHtml;
+
+            let scatterHtml = `
+            <div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
+                <div class="special-img">
+                    <img src="SCATTER.png">
+                    <div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div>
+                </div>
+                <div class="special-text">
+                    <div class="rule-title" style="color:#00bfff;">免費遊戲 (Free Game)</div>
+                    <div class="desc-row">
+                        <span class="c-white">3 顆 寶箱</span> <span class="c-cyan">5 局</span>
+                    </div>
+                    <div class="desc-row">
+                        <span class="c-white">4 顆 寶箱</span> <span class="c-cyan">10 局</span>
+                    </div>
+                    <div class="desc-row">
+                        <span class="c-yellow">5 顆 寶箱</span> <span class="c-red">15 局 (極限大獎!)</span>
+                    </div>
+                </div>
+            </div>`;
+            container.innerHTML += scatterHtml;
+
+            let dragonHtml = `
+            <div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);">
+                <div class="special-img">
+                    <img src="x100.png" style="filter: drop-shadow(0 0 5px gold);">
+                    <div class="c-yellow" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">龍眼倍數</div>
+                </div>
+                <div class="special-text">
+                    <div class="rule-title" style="color:#ffd700;">龍眼倍數 (Multiplier)</div>
+                    <div class="desc-row">
+                        <span class="c-gray">5局 (3寶箱)</span> 
+                        <span>常見 <span class="c-cyan">x2</span>, 有機會 <span class="c-cyan">x10</span></span>
+                    </div>
+                    <div class="desc-row">
+                        <span class="c-gray">10局 (4寶箱)</span> 
+                        <span>常見 <span class="c-cyan">x10</span>, 有機會 <span class="c-yellow">x25</span></span>
+                    </div>
+                    <div class="desc-row">
+                        <span class="c-gray">15局 (5寶箱)</span> 
+                        <span>解鎖 <span class="c-red" style="font-size:1.6vh; text-shadow:0 0 5px red;">x100</span> 頂級倍數!</span>
+                    </div>
+                    <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">
+                        *倍數僅乘算當局贏分 (不累積)
+                    </div>
+                </div>
+            </div>`;
+            container.innerHTML += dragonHtml;
+            
+            let rulesHtml = `
+            <div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;">
+                <div class="info-title" style="font-size:2.2vh; margin-bottom:5px; color:#7cfc00;">★ 遊戲規則 ★</div>
+                <ul class="rules-list">
+                    <li><strong>243 路 (Ways):</strong> 只要符號由最左軸算起，連續三個以上出現在相鄰卷軸上即視為中獎。</li>
+                    <li><strong>特殊倍數:</strong> 龍眼倍數只會出現在免費遊戲內，將與當局所有贏分相乘。多個龍眼倍數會相加計算。</li>
+                    <li><strong>免費遊戲:</strong> 3個以上 SCATTER 觸發免費遊戲後，AKQJ等低分符號將會被移除，龍眼倍數會因免費局數不同產生倍數變化。</li>
+                </ul>
+            </div>
+            `;
+            container.innerHTML += rulesHtml;
+        }
+
+        function handleFirstInteraction() {
+            if (!firstInteraction) {
+                firstInteraction = true;
+                if (AudioMgr.enabled) AudioMgr.playBGM('main');
+            }
+        }
+
+        function buyFeature() {
+            if (isSpinning || gameData.isFreeGame) return;
+            isAutoPlay = false;
+            
+            const buyCost = gameData.bet * 250;
+            if (gameData.credit < buyCost) { alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); return; }
+            if (confirm(`確定要花費 ${buyCost.toLocaleString()} 購買免費遊戲嗎？`)) {
+                gameData.credit -= buyCost; updateAllUI(); 
+                isBuyingFeature = true;
+                let rand = Math.random();
+                buyTriggerType = 3; 
+                if (rand > 0.995) buyTriggerType = 5; 
+                else if (rand > 0.95) buyTriggerType = 4; 
+                startSpin(); 
+            }
+        }
+
+        function startPromoLoop() {
+            if(promoInterval) clearInterval(promoInterval);
+            promoInterval = setInterval(() => {
+                const msgBar = document.getElementById('ui-message-bar');
+                if (!isSpinning && !gameData.isFreeGame && gameData.currentWin === 0 && msgBar.style.display === 'none') { 
+                    showPromoMessage(); 
+                }
+            }, 14000); 
+        }
+
+        function showTriggerMessage(spins) {
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            
+            msgBar.style.display = 'flex';
+            msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`;
+            msgContent.className = 'style-blue anim-pop'; 
+            
+            setTimeout(() => {
+                msgBar.style.display = 'none';
+            }, 3000);
+        }
+
+        function showPromoMessage() {
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            msgContent.innerText = "★ 3個 SCATTER 觸發 5次 免費遊戲 ★";
+            msgContent.className = 'style-promo anim-scroll'; msgBar.style.display = 'flex';
+            setTimeout(() => {
+                if(!isSpinning && gameData.currentWin === 0 && !gameData.isFreeGame) { 
+                    msgBar.style.display = 'none'; msgContent.className = ''; 
+                }
+            }, 10000);
+        }
+
+        function showWinMessage(amount) {
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            msgContent.innerText = "WIN " + amount.toLocaleString('en-US', {minimumFractionDigits: 2});
+            msgContent.className = 'style-win'; 
+            msgContent.classList.remove('anim-pop'); void msgContent.offsetWidth; msgContent.classList.add('anim-pop');
+            msgBar.style.display = 'flex';
+        }
+
+        function updateFreeGameMessage(state, value) {
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            msgBar.style.display = 'flex';
+            if (state === 'spin') {
+                msgContent.innerText = `FREE SPINS: ${value}`;
+                msgContent.className = 'style-blue anim-pop';
+            } else if (state === 'win') {
+                msgContent.innerText = `WIN: ${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                msgContent.className = 'style-win anim-pop';
+            }
+        }
+
+        function getWeightedSymbol() {
+            let usePool = gameData.isFreeGame ? poolFree : poolBase;
+            let useTotal = gameData.isFreeGame ? totalWeightFree : totalWeightBase;
+            if (gameData.isFreeGame && usePool.length === 0) return 1;
+            let r = Math.random() * useTotal; let sum = 0;
+            for (let item of usePool) { sum += item.weight; if (r <= sum) return item.id; }
+            return gameData.isFreeGame ? 1 : 9; 
+        }
+
+        function initGrid() {
+            const grid = document.getElementById('grid'); grid.innerHTML = ''; gridData = [];
+            for(let c=0; c<config.cols; c++) {
+                gridData[c] = []; 
+                let colDiv = document.createElement('div'); colDiv.className = 'column'; colDiv.id = `col-${c}`;
+                grid.appendChild(colDiv);
+            }
+        }
+
+        function createSymbol(type) {
+            let div = document.createElement('div');
+            if (type === 10) div.className = `symbol sym-wild`;
+            else if (type === 11) div.className = `symbol sym-scatter`;
+            else if (type >= 20) div.className = `symbol sym-mul sym-${type}`; 
+            else { div.className = `symbol sym-${type}`; div.style.backgroundImage = `url('s${type}.png')`; }
+            return div;
+        }
+
+        function fillRandom(animate) {
+            for(let c=0; c<config.cols; c++) {
+                const colDiv = document.getElementById(`col-${c}`); gridData[c] = []; colDiv.innerHTML = '';
+                for(let r=0; r<config.rows; r++) {
+                    let type = getWeightedSymbol();
+                    if (!type) type = 1; 
+                    gridData[c].push(type);
+                    let el = createSymbol(type); el.setAttribute('data-row', r);
+                    if(animate) { el.style.animation = `landBounce 0.4s ease-out forwards`; el.style.animationDelay = `${c*0.1 + r*0.05}s`; }
+                    colDiv.appendChild(el);
+                }
+            }
+        }
+
+        async function startSpin() {
+            if(isSpinning) return;
+            if(!gameData.isFreeGame && !isBuyingFeature && gameData.credit < gameData.bet) { 
+                alert("點數不足！"); 
+                isAutoPlay = false; 
+                return; 
+            }
+            
+            isSpinning = true;
+            if (!isAutoPlay) AudioMgr.playSFX('spin'); 
+
+            // ★ V13.40：開始旋轉時，加速圖示
+            document.getElementById('spin-icon').classList.add('fast');
+
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            
+            if (!gameData.isFreeGame) {
+                msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
+                if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
+                gameData.accumulatedMultiplier = 0; resetMultiplierUI(); gameData.currentWin = 0;
+            } else { 
+                gameData.freeSpinsLeft--; 
+                updateFreeGameMessage('spin', gameData.freeSpinsLeft);
+            }
+            
+            score = 0; updateAllUI(); 
+
+            const spinPromises = [];
+            for(let c=0; c<config.cols; c++) {
+                const p = new Promise(async (resolve) => {
+                    await wait(c * 100); 
+                    
+                    let colDiv = document.getElementById(`col-${c}`);
+                    let currentSyms = [...gridData[c]];
+                    if(currentSyms.length === 0) currentSyms = [1,2,3]; 
+
+                    let fillerSyms = []; 
+                    for(let i=0; i<10; i++) { 
+                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
+                    } 
+                    
+                    let targetSyms = [];
+                    if (isBuyingFeature) {
+                        let hasScatter = false;
+                        if (buyTriggerType === 3) hasScatter = (c === 0 || c === 2 || c === 4);
+                        else if (buyTriggerType === 4) hasScatter = (c !== 2); 
+                        else if (buyTriggerType === 5) hasScatter = true;
+
+                        if (hasScatter) {
+                            let scatterPos = Math.floor(Math.random() * 3);
+                            for(let r=0; r<config.rows; r++) {
+                                if (r === scatterPos) targetSyms.push(11); 
+                                else {
+                                    let s = getWeightedSymbol();
+                                    while(s === 11) s = getWeightedSymbol();
+                                    targetSyms.push(s);
+                                }
+                            }
+                        } else {
+                            for(let r=0; r<config.rows; r++) {
+                                let s = getWeightedSymbol();
+                                while(s === 11) s = getWeightedSymbol();
+                                targetSyms.push(s);
+                            }
+                        }
+                    } else {
+                        for(let r=0; r<config.rows; r++) { targetSyms.push(getWeightedSymbol()); }
+                    }
+                    
+                    gridData[c] = targetSyms;
+
+                    let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
+                    let stripDiv = document.createElement('div'); stripDiv.className = 'reel-strip';
+                    stripContent.forEach((type) => { let el = createSymbol(type); stripDiv.appendChild(el); });
+
+                    let totalSymbols = stripContent.length;
+                    let visibleSymbols = config.rows;
+                    let totalHeightPct = (totalSymbols / visibleSymbols) * 100;
+                    stripDiv.style.height = `${totalHeightPct}%`;
+                    
+                    colDiv.appendChild(stripDiv);
+                    let oldSymbols = colDiv.querySelectorAll('.column > .symbol');
+                    oldSymbols.forEach(el => el.remove());
+
+                    void stripDiv.offsetWidth; 
+
+                    let symbolsToMove = currentSyms.length + fillerSyms.length;
+                    let movePct = (symbolsToMove / totalSymbols) * 100;
+                    stripDiv.classList.add('moving');
+                    stripDiv.style.transform = `translateY(${movePct}%)`;
+
+                    await wait(1650); 
+                    AudioMgr.playSFX('stop');
+                    await wait(100);
+
+                    colDiv.innerHTML = ''; 
+                    targetSyms.forEach((type, r) => {
+                        let el = createSymbol(type); el.setAttribute('data-row', r);
+                        el.style.animation = 'landBounce 0.3s ease-out'; colDiv.appendChild(el);
+                    });
+                    
+                    resolve();
+                });
+                spinPromises.push(p);
+            }
+            await Promise.all(spinPromises);
+            
+            isBuyingFeature = false;
+            await wait(800); 
+            checkLogic();
+        }
+
+        async function checkLogic() {
+            let matches = new Set(); let roundScore = 0; let tempMulCoords = []; let spinMultipliers = 0;
+            for(let c=0; c<config.cols; c++) {
+                for(let r=0; r<config.rows; r++) {
+                    let id = gridData[c][r];
+                    if(SYMBOLS[id].type === 'mul') { spinMultipliers += SYMBOLS[id].val; tempMulCoords.push(`${c},${r}`); }
+                }
+            }
+            for(let targetId=1; targetId<=9; targetId++) {
+                if(gameData.isFreeGame && targetId >= 6) continue;
+                let consecutiveCols = 0; let tempMatches = [];
+                for(let c=0; c<config.cols; c++) {
+                    let hasSymbol = false;
+                    for(let r=0; r<config.rows; r++) {
+                        let id = gridData[c][r];
+                        if(id === targetId || id === 10) { hasSymbol = true; tempMatches.push(`${c},${r}`); }
+                    }
+                    if(hasSymbol) consecutiveCols++; else break;
+                }
+                if(consecutiveCols >= 3) {
+                    let payout = SYMBOLS[targetId].payouts[consecutiveCols];
+                    if(payout) {
+                        roundScore += payout * (gameData.bet / 20); 
+                        tempMatches.forEach(key => { let [mc, mr] = key.split(',').map(Number); if(mc < consecutiveCols) matches.add(key); });
+                    }
+                }
+            }
+
+            let scatterCount = 0;
+            for(let c=0; c<config.cols; c++) { for(let r=0; r<config.rows; r++) { if(gridData[c][r] === 11) scatterCount++; } }
+
+            if (scatterCount >= 3 && !gameData.isFreeGame) {
+                for(let c=0; c<config.cols; c++) {
+                    for(let r=0; r<config.rows; r++) {
+                        if (gridData[c][r] === 11) {
+                            let el = getSymbolEl(c, r);
+                            if(el) {
+                                el.classList.add('active');
+                                el.style.animation = 'none';
+                                el.offsetHeight; 
+                                el.style.animation = ''; 
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (matches.size > 0) { 
+                tempMulCoords.forEach(key => matches.add(key));
+                let totalMul = gameData.accumulatedMultiplier + spinMultipliers;
+                if (totalMul < 1) totalMul = 1;
+
+                if (gameData.isFreeGame && spinMultipliers > 0) {
+                    gameData.accumulatedMultiplier += spinMultipliers; updateMultiplierUI();
+                }
+
+                let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
+                updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
+
+                if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
+
+                if (finalWin > gameData.bet * 10) {
+                    AudioMgr.playSFX('bigWin');
+                } else {
+                    if(gameData.isFreeGame) AudioMgr.playSFX('winFree');
+                    else AudioMgr.playSFX('win');
+                }
+
+                let hasWildWin = false;
+                matches.forEach(key => {
+                    let [c, r] = key.split(',');
+                    if (gridData[c][r] === 10) hasWildWin = true;
+                });
+                if (hasWildWin) {
+                    AudioMgr.playSFX('dragon');
+                }
+
+                matches.forEach(key => {
+                    let [c, r] = key.split(','); let el = getSymbolEl(c, r);
+                    if(el) {
+                        el.style.animation = ''; el.style.transition = ''; void el.offsetHeight; el.classList.add('anim-win');
+                        let id = gridData[c][r];
+                        if (id === 10 || (id >= 1 && id <= 5) || (id >= 20 && id <= 23)) {
+                            el.classList.add('active');
+                        }
+                    }
+                });
+
+                await wait(2000); 
+                matches.forEach(key => {
+                    let [c, r] = key.split(','); let el = getSymbolEl(c, r);
+                    if(el) { el.classList.remove('anim-win'); el.classList.remove('active'); el.classList.add('anim-explode'); }
+                });
+                await wait(400); 
+                
+                await doRefill(matches); 
+
+                let currentScatterCount = 0;
+                for(let c=0; c<config.cols; c++) {
+                    for(let r=0; r<config.rows; r++) {
+                        if(gridData[c][r] === 11) currentScatterCount++;
+                    }
+                }
+                if (currentScatterCount >= 3) {
+                    document.querySelectorAll('.sym-scatter').forEach(el => {
+                        el.classList.add('active'); 
+                        el.style.animation = 'none'; 
+                        el.offsetHeight; 
+                        el.style.animation = ''; 
+                    });
+                }
+
+            } else {
+                if (scatterCount >= 3 && !gameData.isFreeGame) {
+                    AudioMgr.playSFX('scatter');
+                    document.querySelectorAll('.sym-scatter').forEach(el => {
+                        el.classList.add('active');
+                        el.style.animation = 'none';
+                        el.offsetHeight;
+                        el.style.animation = '';
+                    });
+                    const bgVideo = document.getElementById('bg-video');
+                    bgVideo.classList.add('bg-highlight');
+                    await wait(1500);
+                    triggerFreeGame(scatterCount);
+                    bgVideo.classList.remove('bg-highlight');
+                    await wait(500);
+                } else if (gameData.isFreeGame) {
+                    if (scatterCount >= 3) {
+                        let addSpins = 0;
+                        if (scatterCount === 3) addSpins = 5;
+                        else if (scatterCount === 4) addSpins = 10;
+                        else if (scatterCount >= 5) addSpins = 15;
+
+                        gameData.freeSpinsLeft += addSpins;
+                        updateAllUI();
+                        AudioMgr.playSFX('scatter');
+                        alert(`🐲 龍神顯靈！再加 ${addSpins} 局！\n(目前剩餘: ${gameData.freeSpinsLeft} 局)`);
+                    }
+
+                    isSpinning = false; 
+                    if(gameData.freeSpinsLeft > 0) { setTimeout(startSpin, 1500); } else { endFreeGame(); }
+                } else {
+                    endSpin();
+                }
+            }
+        }
+
+        async function doRefill(matches) {
+            let hasRefill = false;
+            for(let c=0; c<config.cols; c++) {
+                let oldColData = gridData[c]; let survivors = [];
+                for(let r=0; r<oldColData.length; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); }
+                if(survivors.length === oldColData.length) continue; 
+                hasRefill = true;
+                let colDiv = document.getElementById(`col-${c}`); colDiv.innerHTML = ''; let newColData = [];
+                survivors.forEach((item, newR) => {
+                    newColData.push(item.type); let el = createSymbol(item.type); el.setAttribute('data-row', newR);
+                    let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
+                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                });
+                let missing = config.rows - survivors.length;
+                for(let k=0; k<missing; k++) {
+                    let type = getWeightedSymbol();
+                    if (!type) type = 1;
+                    newColData.push(type);
+                    let el = createSymbol(type); let newR = survivors.length + k;
+                    el.setAttribute('data-row', newR);
+                    let dropDist = (config.rows + k) - newR; el.style.transform = `translateY(-${dropDist * 100}%)`;
+                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                }
+                gridData[c] = newColData;
+            }
+            if(hasRefill) { 
+                await wait(400); 
+                AudioMgr.playSFX('stop');
+                await wait(300); 
+                checkLogic(); 
+            } else { endSpin(); }
+        }
+
+        function endSpin() {
+            isSpinning = false;
+            
+            // ★ V13.40：旋轉結束時，移除加速 class，恢復慢速
+            document.getElementById('spin-icon').classList.remove('fast');
+
+            if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
+            if(gameData.currentWin > 0) { gameData.credit += gameData.currentWin; gameData.currentWin = 0; updateAllUI(); }
+
+            if (isAutoPlay && !gameData.isFreeGame) {
+                if (gameData.credit >= gameData.bet) {
+                    setTimeout(() => {
+                        if (isAutoPlay) startSpin(); 
+                    }, 800); 
+                } else {
+                    isAutoPlay = false;
+                    alert("餘額不足，停止自動旋轉");
+                }
+            }
+        }
+
+        function triggerFreeGame(count) {
+            isAutoPlay = false;
+
+            let spins = 0;
+            if (count === 3) spins = 5;
+            else if (count === 4) spins = 10;
+            else if (count >= 5) spins = 15;
+
+            updateFreeGameWeights(count);
+
+            gameData.isFreeGame = true; gameData.freeSpinsLeft = spins; gameData.accumulatedMultiplier = 0;
+            document.body.classList.add('free-mode');
+            updateFreeGameMessage('spin', spins);
+            updateAllUI();
+            
+            showTriggerMessage(spins);
+            
+            setTimeout(() => {
+                AudioMgr.playBGM('free');
+                isSpinning = false; 
+                startSpin();
+            }, 3000);
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const finalStr = end.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const len = finalStr.length;
+            let newSize = 11; 
+            if (len > 8) {
+                newSize = Math.max(5, 11 - (len - 8) * 1.0);
+            }
+            obj.style.fontSize = `${newSize}vh`;
+
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const easeProgress = 1 - Math.pow(2, -10 * progress);
+                
+                obj.innerText = (start + (end - start) * easeProgress).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerText = end.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        async function endFreeGame() {
+            const modal = document.getElementById('fg-end-modal');
+            const scoreEl = document.getElementById('fg-end-score');
+            const finalWin = gameData.currentWin;
+
+            modal.classList.remove('fade-out');
+            modal.classList.add('active');
+            
+            AudioMgr.playSFX('youWin');
+
+            animateValue(scoreEl, 0, finalWin, 1500);
+
+            await wait(6500);
+
+            modal.classList.add('fade-out');
+            await wait(1000); 
+
+            modal.classList.remove('active');
+            modal.classList.remove('fade-out');
+
+            gameData.isFreeGame = false;
+            document.body.classList.remove('free-mode');
+            
+            AudioMgr.playBGM('main');
+            
+            const msgBar = document.getElementById('ui-message-bar');
+            msgBar.style.display = 'none';
+
+            gameData.credit += gameData.currentWin; 
+            gameData.currentWin = 0; 
+            isSpinning = false; 
+            
+            // ★【加入這一行】強制移除加速 class，讓 Spin 鍵恢復慢速
+            const spinIcon = document.getElementById('spin-icon');
+            if (spinIcon) spinIcon.classList.remove('fast');
+            
+            updateAllUI();
+        }
+
+        function changeBet(amount) {
+            if (isSpinning) return; 
+            let newBet = gameData.bet + amount; if (newBet < 100) newBet = 100; if (newBet > 5000) newBet = 5000;
+            gameData.bet = newBet; updateAllUI(); 
+            const betEl = document.getElementById('ui-bet');
+            betEl.classList.remove('text-pop'); void betEl.offsetWidth; betEl.classList.add('text-pop'); 
+            setTimeout(() => betEl.classList.remove('text-pop'), 150);
+        }
+
+        function updateAllUI() {
+            document.getElementById('ui-credit').innerText = gameData.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('ui-bet').innerText = gameData.bet.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('ui-win').innerText = gameData.currentWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+            if(gameData.isFreeGame) { }
+        }
+        function updateMultiplierUI() { }
+        function resetMultiplierUI() { }
+        function triggerWinAnimation() {
+            const winEl = document.getElementById('ui-win');
+            winEl.classList.remove('text-pop-center'); void winEl.offsetWidth; winEl.classList.add('text-pop-center');
+            setTimeout(() => winEl.classList.remove('text-pop-center'), 150);
+        }
+        function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+        function getSymbolEl(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
+    </script>
+</body>
+</html>
