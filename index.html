@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.55 節奏優化版)</title>
+    <title>火龍祕寶 (V13.64 豪華特效版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -30,10 +30,10 @@
         }
         .stage.loaded { opacity: 1; }
 
-        /* --- Loading Screen (V13.52 樣式) --- */
+        /* --- Loading Screen --- */
         #loading-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: transparent; /* 透出背景 */
+            background-color: transparent; 
             z-index: 9999;
             display: flex; justify-content: center; align-items: center;
             transition: opacity 0.5s ease-out;
@@ -109,7 +109,24 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- 按鈕參數 (鎖定不變) --- */
+        /* --- 獨立黑色遮罩層 (Level 1) --- */
+        #fg-mask {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); 
+            z-index: 2500; 
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out;
+        }
+        #fg-mask.active { opacity: 1; pointer-events: auto; }
+        #fg-mask.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
+
+        /* --- Canvas 金幣層 (Level 2) --- */
+        #coin-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2600; /* 夾在遮罩(2500)與視窗(2700)中間 */
+            pointer-events: none; 
+        }
+
+        /* --- 按鈕參數 --- */
         .phone-button {
             position: absolute; left: 2%; top: 2%; width: 9%; 
             cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
@@ -191,7 +208,7 @@
         .anim-scroll { animation: scrollPass 10s linear forwards; } @keyframes scrollPass { 0% { transform: translateX(100%); opacity: 0; } 15% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-150%); opacity: 1; } }
         .text-pop { transform: translateX(50%) scale(1.3) !important; } .text-pop-center { transform: scale(1.3) !important; }
         
-        /* Spin 按鈕 & 旋轉動畫 (鎖定參數) */
+        /* Spin 按鈕 & 旋轉動畫 */
         .spin-trigger { 
             position: absolute; 
             bottom: 11.6%; 
@@ -215,7 +232,7 @@
         @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
         @keyframes spinFast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
 
-        /* 底部按鈕參數 (鎖定且透明) */
+        /* 底部按鈕參數 */
         .click-area { 
             position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; 
             background-color: rgba(255, 0, 0, 0); 
@@ -240,10 +257,17 @@
             100% { transform: translateY(0); } 
         }
 
-        /* Free Game 報獎視窗 */
-        #fg-end-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2500; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
+        /* --- 報獎視窗層級 (Level 3) --- */
+        #fg-end-modal { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: transparent; 
+            z-index: 2700; /* 最上層 */
+            display: flex; justify-content: center; align-items: center; 
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; 
+        }
         #fg-end-modal.active { opacity: 1; pointer-events: auto; }
         #fg-end-modal.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
+        
         #fg-end-modal .content-wrapper { text-align: center; position: relative; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; width: 100%; }
         #fg-end-modal .win-title { width: 80%; height: auto; display: block; margin: 0 auto 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
         #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: 11vh; color: #FFFF00; margin-top: -3vh; text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000, -2px -2px 0 #ff3000, 2px -2px 0 #ff3000, -2px 2px 0 #ff3000, 6px 6px 0 #850000, 8px 8px 5px rgba(0,0,0,0.5); letter-spacing: 2px; white-space: nowrap; transition: font-size 0.3s ease-out; }
@@ -309,12 +333,6 @@
         input:checked + .slider { background-color: #ffd700; }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        /* 規則文字區 */
-        .rules-container { margin-top: 15px; text-align: left; padding: 10px 5px; border-top: 1px solid rgba(255,255,255,0.3); }
-        .rules-list { list-style-type: none; padding: 0; margin: 0; font-size: 1.5vh; color: #f0f0f0; line-height: 1.6; }
-        .rules-list li { margin-bottom: 8px; padding-left: 10px; border-left: 3px solid #ffd700; }
-        .rules-list strong { color: #fff; font-weight: 900; margin-right: 5px; }
-
         /* 購買確認視窗樣式 */
         #buy-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2800; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #buy-modal.active { display: flex; opacity: 1; }
@@ -347,6 +365,10 @@
 
         <div class="ui-layer"></div>
         <div class="fire-effect"></div>
+        
+        <div id="fg-mask"></div>
+
+        <canvas id="coin-canvas"></canvas>
         
         <img id="btn-phone" src="phone.png" class="phone-button">
         <img id="btn-buy" src="buy_btn.png" class="buy-button">
@@ -542,6 +564,152 @@
     </script>
 
     <script>
+        const CoinManager = {
+            canvas: null,
+            ctx: null,
+            particles: [],
+            isRunning: false,
+            coinImg: new Image(),
+            imgLoaded: false,
+
+            init: function() {
+                this.canvas = document.getElementById('coin-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                this.coinImg.src = 'coin.png';
+                this.coinImg.onload = () => { this.imgLoaded = true; };
+            },
+
+            resize: function() {
+                if(this.canvas) {
+                    this.canvas.width = this.canvas.offsetWidth;
+                    this.canvas.height = this.canvas.offsetHeight;
+                }
+            },
+
+            fire: function(amount) {
+                // 根據贏分大小決定噴發數量
+                let count = 30; // 基本數量
+                if (amount > gameData.bet * 5) count = 80; // 中獎
+                if (amount > gameData.bet * 10) count = 150; // 大獎
+
+                // 如果正在跑，就疊加
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.animate();
+                }
+
+                for (let i = 0; i < count; i++) {
+                    this.particles.push(this.createParticle('coin'));
+                    // 同時噴發 1~2 個星光粒子
+                    if(Math.random() > 0.5) this.particles.push(this.createParticle('sparkle'));
+                }
+            },
+
+            createParticle: function(type) {
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                if (type === 'coin') {
+                    return {
+                        type: 'coin',
+                        x: w / 2, // 從中間噴出
+                        y: h + 50, // 從底部噴出
+                        vx: (Math.random() - 0.5) * (w * 0.03), // 水平擴散
+                        vy: -(Math.random() * h * 0.025 + h * 0.015), // 向上噴射力度
+                        gravity: h * 0.0005,
+                        size: (Math.random() * 30 + 30) * (w / 720), // 隨機大小
+                        rotation: Math.random() * 360,
+                        rSpeed: (Math.random() - 0.5) * 10
+                    };
+                } else {
+                    // 星光粒子參數
+                    return {
+                        type: 'sparkle',
+                        x: w / 2 + (Math.random() - 0.5) * 50,
+                        y: h + 50,
+                        vx: (Math.random() - 0.5) * (w * 0.04),
+                        vy: -(Math.random() * h * 0.028 + h * 0.01),
+                        gravity: h * 0.0002, // 比較輕
+                        size: Math.random() * 5 + 2, // 很小
+                        alpha: 1,
+                        decay: Math.random() * 0.02 + 0.01 // 慢慢消失
+                    };
+                }
+            },
+
+            animate: function() {
+                if (!this.isRunning) return;
+                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (let i = 0; i < this.particles.length; i++) {
+                    let p = this.particles[i];
+                    
+                    p.vy += p.gravity;
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.type === 'coin') {
+                        p.rotation += p.rSpeed;
+                        
+                        this.ctx.save();
+                        this.ctx.translate(p.x, p.y);
+                        this.ctx.rotate(p.rotation * Math.PI / 180);
+                        
+                        // ★ 金幣外發光特效 (Glow) ★
+                        this.ctx.shadowBlur = 15;
+                        this.ctx.shadowColor = '#ff8c00'; // 橙黃光暈
+
+                        if (this.imgLoaded) {
+                            this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
+                        } else {
+                            // 沒圖片時畫替代圓形
+                            this.ctx.beginPath();
+                            this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
+                            this.ctx.fillStyle = '#ffd700';
+                            this.ctx.fill();
+                        }
+                        this.ctx.restore();
+                    } else {
+                        // ★ 繪製星光粒子 (Sparkle) ★
+                        p.alpha -= p.decay;
+                        if(p.alpha <= 0) {
+                            this.particles.splice(i, 1);
+                            i--;
+                            continue;
+                        }
+                        this.ctx.save();
+                        this.ctx.globalAlpha = p.alpha;
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        this.ctx.fillStyle = '#ffffff'; // 白光中心
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.shadowColor = '#ffff00'; // 金光外暈
+                        this.ctx.fill();
+                        this.ctx.restore();
+                    }
+
+                    // 移除超出螢幕的
+                    if (p.y > this.canvas.height + 100) {
+                        this.particles.splice(i, 1);
+                        i--;
+                    }
+                }
+
+                if (this.particles.length > 0) {
+                    requestAnimationFrame(() => this.animate());
+                } else {
+                    this.isRunning = false;
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+        };
+    </script>
+
+    <script>
         const config = { cols: 5, rows: 3 }; 
         
         const SYMBOLS = {
@@ -638,7 +806,7 @@
                 "you-win.png", "phone.png", "gui-top.png", "spin.png",
                 "background.jpg", "UI.png", "buy_btn.png", "SCATTER.png", "WILD.png", "WILD_word.png", "SCATTER_word.png",
                 "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png",
-                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg"
+                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png"
             ];
             
             const audioAssets = [
@@ -693,8 +861,11 @@
 
             // 3. 初始化音效 (這是解鎖的關鍵！)
             AudioMgr.init();
+            
+            // 4. 初始化金幣系統
+            CoinManager.init();
 
-            // 4. 執行原本的遊戲初始化
+            // 5. 執行原本的遊戲初始化
             initGameLogic();
         });
 
@@ -1210,6 +1381,9 @@
                 let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
                 updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
 
+                /* ★ V13.61 修改：普通贏分不噴金幣，只在結束時噴 ★ */
+                // if(finalWin > 0) CoinManager.fire(finalWin); // 這一行已移除
+
                 if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
 
                 if (finalWin > gameData.bet * 10) {
@@ -1404,23 +1578,39 @@
 
         async function endFreeGame() {
             const modal = document.getElementById('fg-end-modal');
+            const mask = document.getElementById('fg-mask'); // ★ 取得獨立遮罩
             const scoreEl = document.getElementById('fg-end-score');
             const finalWin = gameData.currentWin;
 
+            /* ★ 同步控制遮罩與視窗 ★ */
             modal.classList.remove('fade-out');
+            mask.classList.remove('fade-out');
+
             modal.classList.add('active');
+            mask.classList.add('active');
             
             AudioMgr.playSFX('youWin');
+
+            // 開始噴金幣
+            let waves = 0;
+            let sprayer = setInterval(() => {
+                CoinManager.fire(finalWin); 
+                waves++;
+                if(waves >= 5) clearInterval(sprayer);
+            }, 600);
 
             animateValue(scoreEl, 0, finalWin, 1500);
 
             await wait(6500);
 
             modal.classList.add('fade-out');
+            mask.classList.add('fade-out');
             await wait(1000); 
 
             modal.classList.remove('active');
+            mask.classList.remove('active');
             modal.classList.remove('fade-out');
+            mask.classList.remove('fade-out');
 
             gameData.isFreeGame = false;
             document.body.classList.remove('free-mode');
