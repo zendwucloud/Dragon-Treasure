@@ -37,11 +37,8 @@
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
         .fire-effect {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 5; opacity: 0;
-            transition: opacity 1s ease-in-out;
-            box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); mix-blend-mode: overlay; 
-        }
+    display: none; /* 直接隱藏，手機會瞬間變順暢 */
+}
         .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
         @keyframes firePulse {
             0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); }
@@ -82,7 +79,16 @@
         }
         .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; padding: 0; overflow: visible; }
         .column { position: relative; width: 18.89%; height: 100%; display: block; z-index: 1; transition: box-shadow 0.3s; }
-        .reel-strip { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column-reverse; will-change: transform; transform: translateY(0); z-index: 5; }
+
+        /* 修改後 */
+.reel-strip { 
+    position: absolute; bottom: 0; left: 0; width: 100%; 
+    display: flex; flex-direction: column-reverse; 
+    will-change: transform; 
+    /* 強制開啟 GPU 硬體加速 */
+    transform: translate3d(0, 0, 0); 
+    z-index: 5; 
+}
         .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
         .reel-strip.moving.blur { filter: blur(4px); }
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
@@ -351,31 +357,68 @@
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
-//背景音樂音量調整
             init: function() {
+                // 1. 初始化音量
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
-                document.getElementById('bgm_main').volume = 0.8;
-                document.getElementById('bgm_free').volume = 1;
+                // 調整背景音樂音量
+                const bgmMain = document.getElementById('bgm_main');
+                const bgmFree = document.getElementById('bgm_free');
+                if(bgmMain) bgmMain.volume = 0.8;
+                if(bgmFree) bgmFree.volume = 1.0;
                 
+                // 2. 定義解鎖函式 (修正版)
                 const unlock = () => {
+                    // (A) 針對「音效 (SFX)」做預載與暫停，避開背景音樂
+                    document.querySelectorAll('audio').forEach(a => {
+                        if (a.id !== 'bgm_main' && a.id !== 'bgm_free') {
+                            a.volume = 0;           // 先靜音
+                            a.play().catch(()=>{}); // 預載播放
+                            setTimeout(() => { 
+                                a.pause();          // 暫停
+                                a.currentTime = 0; 
+                                a.volume = 1.0;     // 恢復音量
+                            }, 50);
+                        }
+                    });
+
+                    // (B) 正常播放背景音樂
                     if (this.enabled) {
-                        if(gameData.isFreeGame) this.playBGM('free');
-                        else this.playBGM('main');
+                        let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
+                        let bgm = document.getElementById(bgmId);
+                        if(bgm) {
+                            // 再次確認音量設定
+                            bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
+                            bgm.play().catch(()=>{});
+                        }
                     }
+
+                    // (C) 移除監聽，避免重複執行
                     document.body.removeEventListener('click', unlock);
                     document.body.removeEventListener('touchstart', unlock);
                 };
+
+                // 3. ★ 重要：加上監聽器，等待玩家點擊螢幕 ★
+                // (您原本的檔案裡少了這兩行，所以 unlock 永遠不會被執行)
                 document.body.addEventListener('click', unlock);
                 document.body.addEventListener('touchstart', unlock);
             },
             
             playBGM: function(type) {
                 if (!this.enabled) return;
+                
+                // 先暫停所有 BGM
                 document.getElementById('bgm_main').pause();
                 document.getElementById('bgm_free').pause();
                 
-                let target = document.getElementById(type === 'free' ? 'bgm_free' : 'bgm_main');
-                target.play().catch(()=>{});
+                // 決定要播哪首
+                let targetId = (type === 'free') ? 'bgm_free' : 'bgm_main';
+                let target = document.getElementById(targetId);
+                
+                if(target) {
+                    target.currentTime = 0;
+                    target.volume = (type === 'free') ? 1.0 : 0.8;
+                    target.play().catch(()=>{});
+                }
             },
 
             playSFX: function(name) {
@@ -853,9 +896,9 @@
                     if(currentSyms.length === 0) currentSyms = [1,2,3]; 
 
                     let fillerSyms = []; 
-                    for(let i=0; i<10; i++) { 
-                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
-                    } 
+                    for(let i=0; i<6; i++) {
+    fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
+} 
                     
                     let targetSyms = [];
                     if (isBuyingFeature) {
@@ -1216,8 +1259,12 @@
             const spinIcon = document.getElementById('spin-icon');
             if (spinIcon) spinIcon.classList.remove('fast');
             
-            updateAllUI();
-        }
+            // ★ 新增這段：強制喚醒背景影片
+    const bgVideo = document.getElementById('bg-video');
+    if (bgVideo && bgVideo.paused) {
+        bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
+    }
+} // 函式結束的大括號
 
         function changeBet(amount) {
             if (isSpinning) return; 
