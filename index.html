@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.64 豪華特效版)</title>
+    <title>火龍祕寶 (V13.69 高頻閃耀版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -119,14 +119,14 @@
         #fg-mask.active { opacity: 1; pointer-events: auto; }
         #fg-mask.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
 
-        /* --- Canvas 金幣層 (Level 2) --- */
+        /* --- Canvas 金幣層 (Level 2: 夾心層) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2600; /* 夾在遮罩(2500)與視窗(2700)中間 */
+            z-index: 2600; 
             pointer-events: none; 
         }
 
-        /* --- 按鈕參數 --- */
+        /* --- 按鈕參數 (鎖定) --- */
         .phone-button {
             position: absolute; left: 2%; top: 2%; width: 9%; 
             cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
@@ -590,12 +590,13 @@
             },
 
             fire: function(amount) {
-                // 根據贏分大小決定噴發數量
-                let count = 30; // 基本數量
-                if (amount > gameData.bet * 5) count = 80; // 中獎
-                if (amount > gameData.bet * 10) count = 150; // 大獎
+                /* 減少粒子數量 (優化) */
+                let count = 10; 
+                let sparkleCount = 5;
 
-                // 如果正在跑，就疊加
+                if (amount > gameData.bet * 5) { count = 20; sparkleCount = 10; }
+                if (amount > gameData.bet * 10) { count = 40; sparkleCount = 20; }
+
                 if (!this.isRunning) {
                     this.isRunning = true;
                     this.animate();
@@ -603,8 +604,9 @@
 
                 for (let i = 0; i < count; i++) {
                     this.particles.push(this.createParticle('coin'));
-                    // 同時噴發 1~2 個星光粒子
-                    if(Math.random() > 0.5) this.particles.push(this.createParticle('sparkle'));
+                }
+                for (let i = 0; i < sparkleCount; i++) {
+                    this.particles.push(this.createParticle('sparkle'));
                 }
             },
 
@@ -615,27 +617,34 @@
                 if (type === 'coin') {
                     return {
                         type: 'coin',
-                        x: w / 2, // 從中間噴出
-                        y: h + 50, // 從底部噴出
-                        vx: (Math.random() - 0.5) * (w * 0.03), // 水平擴散
-                        vy: -(Math.random() * h * 0.025 + h * 0.015), // 向上噴射力度
+                        x: w / 2, 
+                        y: h + 50, 
+                        vx: (Math.random() - 0.5) * (w * 0.03), 
+                        vy: -(Math.random() * h * 0.025 + h * 0.015), 
                         gravity: h * 0.0005,
-                        size: (Math.random() * 30 + 30) * (w / 720), // 隨機大小
+                        /* V13.66 修改：金幣尺寸放大 3 倍 (*3) */
+                        size: (Math.random() * 30 + 30) * (w / 720) * 3, 
                         rotation: Math.random() * 360,
-                        rSpeed: (Math.random() - 0.5) * 10
+                        rSpeed: (Math.random() - 0.5) * 10,
+                        /* V13.67 翻轉參數 */
+                        flip: Math.random() * Math.PI, 
+                        flipSpeed: Math.random() * 0.2 + 0.1,
+                        /* V13.68 閃光參數 */
+                        isFlashing: false,
+                        flashTimer: 0,
+                        flashDuration: 30 // 約 0.5 秒 (60fps)
                     };
                 } else {
-                    // 星光粒子參數
                     return {
                         type: 'sparkle',
                         x: w / 2 + (Math.random() - 0.5) * 50,
                         y: h + 50,
                         vx: (Math.random() - 0.5) * (w * 0.04),
                         vy: -(Math.random() * h * 0.028 + h * 0.01),
-                        gravity: h * 0.0002, // 比較輕
-                        size: Math.random() * 5 + 2, // 很小
+                        gravity: h * 0.0002,
+                        size: Math.random() * 5 + 2, 
                         alpha: 1,
-                        decay: Math.random() * 0.02 + 0.01 // 慢慢消失
+                        decay: Math.random() * 0.02 + 0.01
                     };
                 }
             },
@@ -654,19 +663,42 @@
 
                     if (p.type === 'coin') {
                         p.rotation += p.rSpeed;
+                        p.flip += p.flipSpeed;
+
+                        /* ★ V13.69 修正：提高閃光觸發機率至 5% ★ */
+                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
+                            p.isFlashing = true;
+                            p.flashTimer = 0;
+                        }
+
+                        let brightness = 100; 
+                        if (p.isFlashing) {
+                            p.flashTimer++;
+                            // 正弦波計算亮度：100% -> 200% -> 100%
+                            let progress = p.flashTimer / p.flashDuration;
+                            brightness = 100 + 100 * Math.sin(progress * Math.PI);
+                            
+                            if (p.flashTimer >= p.flashDuration) {
+                                p.isFlashing = false; // 閃爍結束
+                            }
+                        }
                         
                         this.ctx.save();
                         this.ctx.translate(p.x, p.y);
                         this.ctx.rotate(p.rotation * Math.PI / 180);
                         
-                        // ★ 金幣外發光特效 (Glow) ★
-                        this.ctx.shadowBlur = 15;
-                        this.ctx.shadowColor = '#ff8c00'; // 橙黃光暈
+                        /* 假 3D 翻轉 */
+                        let scaleX = Math.cos(p.flip); 
+                        this.ctx.scale(scaleX, 1);
+                        
+                        /* 套用亮度濾鏡 (只針對正在閃的金幣) */
+                        if (brightness > 105) {
+                            this.ctx.filter = `brightness(${brightness}%)`;
+                        }
 
                         if (this.imgLoaded) {
                             this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
                         } else {
-                            // 沒圖片時畫替代圓形
                             this.ctx.beginPath();
                             this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
                             this.ctx.fillStyle = '#ffd700';
@@ -674,7 +706,7 @@
                         }
                         this.ctx.restore();
                     } else {
-                        // ★ 繪製星光粒子 (Sparkle) ★
+                        /* 閃爍粒子 */
                         p.alpha -= p.decay;
                         if(p.alpha <= 0) {
                             this.particles.splice(i, 1);
@@ -684,15 +716,11 @@
                         this.ctx.save();
                         this.ctx.globalAlpha = p.alpha;
                         this.ctx.beginPath();
-                        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                        this.ctx.fillStyle = '#ffffff'; // 白光中心
-                        this.ctx.shadowBlur = 10;
-                        this.ctx.shadowColor = '#ffff00'; // 金光外暈
-                        this.ctx.fill();
+                        this.ctx.fillStyle = (Math.random() > 0.5) ? '#ffffff' : '#ffff00'; 
+                        this.ctx.fillRect(p.x, p.y, p.size, p.size);
                         this.ctx.restore();
                     }
 
-                    // 移除超出螢幕的
                     if (p.y > this.canvas.height + 100) {
                         this.particles.splice(i, 1);
                         i--;
