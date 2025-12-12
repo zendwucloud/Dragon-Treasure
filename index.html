@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.70 倍數修正版)</title>
+    <title>火龍祕寶 (V13.76 經典特效版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -89,15 +89,29 @@
         /* --- 遊戲內部 CSS --- */
         #bg-video {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: 0; filter: brightness(0.75);
+            object-fit: cover; z-index: 0; 
+            filter: brightness(0.75); /* 7.6版參數 */
             transition: filter 1.0s ease-in-out;
         }
-        .free-mode #bg-video { filter: brightness(1.0); }
+        .free-mode #bg-video { 
+            filter: brightness(1.0); /* 7.6版參數：Free Game 變亮 */
+        }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
-        .fire-effect { display: none; }
-        .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
+        /* ★ V13.76: 完全移植 7.6版 的火龍特效參數 ★ */
+        .fire-effect { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5; opacity: 0;
+            transition: opacity 1s ease-in-out;
+            box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); 
+            mix-blend-mode: overlay; /* 關鍵：疊加模式 */
+        }
+        .free-mode .fire-effect { 
+            opacity: 1; 
+            animation: firePulse 2s infinite alternate ease-in-out; 
+        }
         @keyframes firePulse {
+            /* 7.6版經典參數：橙紅 -> 深紅 */
             0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); }
             100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); }
         }
@@ -364,6 +378,7 @@
         </video>
 
         <div class="ui-layer"></div>
+        
         <div class="fire-effect"></div>
         
         <div id="fg-mask"></div>
@@ -741,17 +756,34 @@
         const config = { cols: 5, rows: 3 }; 
         
         const SYMBOLS = {
-            1:  { type: 'high', payouts: {3: 3, 4: 10, 5: 30},  weight: 8, inBase: true, inFree: true }, 
-            2:  { type: 'high', payouts: {3: 2.5, 4: 8, 5: 25}, weight: 10, inBase: true, inFree: true },
-            3:  { type: 'high', payouts: {3: 2, 4: 6, 5: 20},   weight: 12, inBase: true, inFree: true },
-            4:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
-            5:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
-            6:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
-            7:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
-            8:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
-            9:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
+            /* ★ V13.73 更新：平衡版賠率 (讓遊戲好玩又不會太誇張) ★ */
+            
+            /* 1號(戰士): 5連線 250 (12.5倍) - 仍然是大獎，但不會一次爆太高 */
+            1:  { type: 'high', payouts: {3: 15, 4: 60, 5: 250},  weight: 8, inBase: true, inFree: true }, 
+            
+            /* 2號(女弓手): 5連線 200 (10倍) */
+            2:  { type: 'high', payouts: {3: 12, 4: 50, 5: 200}, weight: 10, inBase: true, inFree: true },
+            
+            /* 3號(法師): 5連線 120 (6倍) */
+            3:  { type: 'high', payouts: {3: 10, 4: 30, 5: 120},   weight: 12, inBase: true, inFree: true },
+            
+            /* 4號(藥水): 5連線 80 (4倍) */
+            4:  { type: 'mid',  payouts: {3: 8, 4: 20, 5: 80}, weight: 20, inBase: true, inFree: true },
+            
+            /* 5號(錢袋): 5連線 60 (3倍) */
+            5:  { type: 'mid',  payouts: {3: 6, 4: 15, 5: 60}, weight: 20, inBase: true, inFree: true },
+            
+            /* 低分符號維持 V13.72 的回本設定 (很好！) */
+            6:  { type: 'low',  payouts: {3: 4, 4: 10, 5: 40},  weight: 60, inBase: true, inFree: false },
+            7:  { type: 'low',  payouts: {3: 3, 4: 8, 5: 30},  weight: 60, inBase: true, inFree: false },
+            8:  { type: 'low',  payouts: {3: 2, 4: 6, 5: 20},  weight: 70, inBase: true, inFree: false },
+            9:  { type: 'low',  payouts: {3: 2, 4: 6, 5: 20},  weight: 70, inBase: true, inFree: false },
+            
+            /* 特殊符號 */
             10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
             11: { type: 'scatter', weight: 2.5, inBase: true, inFree: true }, 
+            
+            /* 龍眼倍數 (Free Game 專用) */
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -1413,6 +1445,9 @@
                 let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
                 updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
 
+                /* ★ V13.61 修改：普通贏分不噴金幣，只在結束時噴 ★ */
+                // if(finalWin > 0) CoinManager.fire(finalWin); // 這一行已移除
+
                 if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
 
                 if (finalWin > gameData.bet * 10) {
@@ -1651,6 +1686,10 @@
 
             gameData.credit += gameData.currentWin; 
             gameData.currentWin = 0; 
+
+            /* ★ V13.73 修正：這裡一定要呼叫更新，不然錢會等轉下一把才跳 ★ */
+            updateAllUI(); 
+
             isSpinning = false; 
             
             const spinIcon = document.getElementById('spin-icon');
