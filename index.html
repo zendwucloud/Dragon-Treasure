@@ -87,7 +87,7 @@
             z-index: 5; 
         }
         /* ★ V13.45 修正：CSS 時間設為 2.0s，配合 JS 的 2000ms */
-        .reel-strip.moving { transition: transform 2.5s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
         
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
         .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; }
@@ -1006,7 +1006,7 @@
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
                     /* ★ V13.45 修正：JS 等待時間設為 2000ms，配合 CSS 的 2.0s */
-                    await wait(2000); 
+                    await wait(1800); 
                     
                     AudioMgr.playSFX('stop');
                     await wait(100);
