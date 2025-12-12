@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.42 Autoplay歸位+大圖示版)</title>
+    <title>火龍祕寶 (V13.43 效能優化版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -37,8 +37,8 @@
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
         .fire-effect {
-    display: none; /* 直接隱藏，手機會瞬間變順暢 */
-}
+            display: none; /* 手機效能考量，維持關閉 */
+        }
         .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
         @keyframes firePulse {
             0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); }
@@ -76,21 +76,30 @@
 
         .reel-viewport {
             position: absolute; top: 21.95%; left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10;
+            /* 讓 GPU 知道這區塊很忙 */
+            will-change: transform; 
         }
         .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; padding: 0; overflow: visible; }
         .column { position: relative; width: 18.89%; height: 100%; display: block; z-index: 1; transition: box-shadow 0.3s; }
 
-        /* 修改後 */
-.reel-strip { 
-    position: absolute; bottom: 0; left: 0; width: 100%; 
-    display: flex; flex-direction: column-reverse; 
-    will-change: transform; 
-    /* 強制開啟 GPU 硬體加速 */
-    transform: translate3d(0, 0, 0); 
-    z-index: 5; 
-}
+        /* ★ V13.43 優化：轉輪條效能設定 */
+        .reel-strip { 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            display: flex; flex-direction: column-reverse; 
+            will-change: transform; 
+            /* 強制開啟 GPU 硬體加速，並隱藏背面以減少運算 */
+            transform: translate3d(0, 0, 0); 
+            backface-visibility: hidden; 
+            perspective: 1000px;
+            z-index: 5; 
+        }
         .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
-        .reel-strip.moving.blur { filter: blur(4px); }
+        
+        /* ★ V13.43 修正：手機上 filter: blur 是效能殺手，已註解掉以解決慢半拍問題 */
+        .reel-strip.moving.blur { 
+            /* filter: blur(4px); */ 
+        }
+        
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
         .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; }
         .column > .symbol { position: absolute; height: 33.333%; left: 0; transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1.3); }
@@ -140,16 +149,13 @@
         .spin-trigger { 
             position: absolute; bottom: 7.7%; left: 50%; transform: translateX(-50%); 
             width: 18.8%; height: 18.8%; border-radius: 50%; cursor: pointer; z-index: 999; 
-            display: flex; justify-content: center; align-items: center; /* 讓內部圖片居中 */
+            display: flex; justify-content: center; align-items: center; 
         }
         #spin-icon {
-            /* ★ V13.42 修改：放大圖示至 130% */
             width: 130%; height: 130%; object-fit: contain;
-            /* 待機狀態 20秒 一圈 (緩慢) */
             animation: spinSlow 20s linear infinite; 
         }
         #spin-icon.fast {
-            /* 旋轉狀態 0.5秒 一圈 (快速) */
             animation: spinFast 0.5s linear infinite !important; 
         }
         @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
@@ -159,18 +165,12 @@
         #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
         #btn-plus { right: 33.4%; bottom: 8.8%; transform: translateX(50%); }
         
-        /* ★ V13.42 修正：Autoplay 歸位 (40.5% / 7.5%) ★ */
         #btn-auto { 
-            position: absolute; 
-            right: 40.5%; 
-            bottom: 7.5%; 
-            width: 10vh; /* 寬度配合圖示 */
-            height: 2vh; /* 高度配合圖示 */
-            background-color: rgba(0, 0, 0, 0); /* 紅色半透明 */
-            border: 0px solid red; 
-            border-radius: 50%; 
-            z-index: 1000; 
-            cursor: pointer; 
+            position: absolute; right: 40.5%; bottom: 7.5%; 
+            width: 10vh; height: 2vh; 
+            background-color: rgba(0, 0, 0, 0); 
+            border: 0px solid red; border-radius: 50%; 
+            z-index: 1000; cursor: pointer; 
         }
 
         @keyframes landBounce { 0% { transform: translateY(-15%); opacity: 1; } 50% { transform: translateY(12%); } 75% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
@@ -358,62 +358,47 @@
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
             init: function() {
-                // 1. 初始化音量
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
-                // 調整背景音樂音量
                 const bgmMain = document.getElementById('bgm_main');
                 const bgmFree = document.getElementById('bgm_free');
                 if(bgmMain) bgmMain.volume = 0.8;
                 if(bgmFree) bgmFree.volume = 1.0;
                 
-                // 2. 定義解鎖函式 (修正版)
                 const unlock = () => {
-                    // (A) 針對「音效 (SFX)」做預載與暫停，避開背景音樂
                     document.querySelectorAll('audio').forEach(a => {
                         if (a.id !== 'bgm_main' && a.id !== 'bgm_free') {
-                            a.volume = 0;           // 先靜音
-                            a.play().catch(()=>{}); // 預載播放
+                            a.volume = 0;           
+                            a.play().catch(()=>{}); 
                             setTimeout(() => { 
-                                a.pause();          // 暫停
+                                a.pause();          
                                 a.currentTime = 0; 
-                                a.volume = 1.0;     // 恢復音量
+                                a.volume = 1.0;     
                             }, 50);
                         }
                     });
 
-                    // (B) 正常播放背景音樂
                     if (this.enabled) {
                         let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
                         let bgm = document.getElementById(bgmId);
                         if(bgm) {
-                            // 再次確認音量設定
                             bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
                             bgm.play().catch(()=>{});
                         }
                     }
-
-                    // (C) 移除監聽，避免重複執行
                     document.body.removeEventListener('click', unlock);
                     document.body.removeEventListener('touchstart', unlock);
                 };
 
-                // 3. ★ 重要：加上監聽器，等待玩家點擊螢幕 ★
-                // (您原本的檔案裡少了這兩行，所以 unlock 永遠不會被執行)
                 document.body.addEventListener('click', unlock);
                 document.body.addEventListener('touchstart', unlock);
             },
             
             playBGM: function(type) {
                 if (!this.enabled) return;
-                
-                // 先暫停所有 BGM
                 document.getElementById('bgm_main').pause();
                 document.getElementById('bgm_free').pause();
-                
-                // 決定要播哪首
                 let targetId = (type === 'free') ? 'bgm_free' : 'bgm_main';
                 let target = document.getElementById(targetId);
-                
                 if(target) {
                     target.currentTime = 0;
                     target.volume = (type === 'free') ? 1.0 : 0.8;
@@ -423,7 +408,6 @@
 
             playSFX: function(name) {
                 if (!this.enabled) return;
-                
                 let key = name;
                 if(name === 'winFree') key = 'win_free';
                 if(name === 'bigWin') key = 'bigwin';
@@ -552,7 +536,7 @@
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
                 "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
                 "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png",
-                "you-win.png", "phone.png", "gui-top.png", "spin.png" // ★ V13.40 加入 spin.png
+                "you-win.png", "phone.png", "gui-top.png", "spin.png"
             ];
             preloadImages.forEach(src => new Image().src = src);
 
@@ -743,15 +727,24 @@
             }
         }
 
-        function buyFeature() {
+        // ★ V13.43 修正：將 buyFeature 改為 async，並加入緩衝時間防止當機
+        async function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
             isAutoPlay = false;
             
             const buyCost = gameData.bet * 250;
             if (gameData.credit < buyCost) { alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); return; }
+            
             if (confirm(`確定要花費 ${buyCost.toLocaleString()} 購買免費遊戲嗎？`)) {
+                // 1. 先處理 UI 更新
                 gameData.credit -= buyCost; updateAllUI(); 
                 isBuyingFeature = true;
+
+                // 2. ★ 關鍵修正：強制讓出主執行緒，讓瀏覽器有時間繪製 UI (防止當機)
+                await new Promise(r => requestAnimationFrame(r));
+                await new Promise(r => setTimeout(r, 50)); 
+
+                // 3. 之後再開始運算
                 let rand = Math.random();
                 buyTriggerType = 3; 
                 if (rand > 0.995) buyTriggerType = 5; 
@@ -869,7 +862,6 @@
             isSpinning = true;
             if (!isAutoPlay) AudioMgr.playSFX('spin'); 
 
-            // ★ V13.40：開始旋轉時，加速圖示
             document.getElementById('spin-icon').classList.add('fast');
 
             const msgBar = document.getElementById('ui-message-bar');
@@ -897,8 +889,8 @@
 
                     let fillerSyms = []; 
                     for(let i=0; i<6; i++) {
-    fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
-} 
+                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
+                    } 
                     
                     let targetSyms = [];
                     if (isBuyingFeature) {
@@ -1155,7 +1147,6 @@
         function endSpin() {
             isSpinning = false;
             
-            // ★ V13.40：旋轉結束時，移除加速 class，恢復慢速
             document.getElementById('spin-icon').classList.remove('fast');
 
             if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
@@ -1255,16 +1246,14 @@
             gameData.currentWin = 0; 
             isSpinning = false; 
             
-            // ★【加入這一行】強制移除加速 class，讓 Spin 鍵恢復慢速
             const spinIcon = document.getElementById('spin-icon');
             if (spinIcon) spinIcon.classList.remove('fast');
             
-            // ★ 新增這段：強制喚醒背景影片
-    const bgVideo = document.getElementById('bg-video');
-    if (bgVideo && bgVideo.paused) {
-        bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
-    }
-} // 函式結束的大括號
+            const bgVideo = document.getElementById('bg-video');
+            if (bgVideo && bgVideo.paused) {
+                bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
+            }
+        } 
 
         function changeBet(amount) {
             if (isSpinning) return; 
