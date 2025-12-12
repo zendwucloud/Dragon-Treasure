@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.69 高頻閃耀版)</title>
+    <title>火龍祕寶 (V13.70 倍數修正版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -1254,7 +1254,9 @@
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
                 if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
-                gameData.accumulatedMultiplier = 0; resetMultiplierUI(); gameData.currentWin = 0;
+                // gameData.accumulatedMultiplier = 0; // V13.70 移除 (已棄用)
+                resetMultiplierUI(); 
+                gameData.currentWin = 0;
             } else { 
                 gameData.freeSpinsLeft--; 
                 updateFreeGameMessage('spin', gameData.freeSpinsLeft);
@@ -1399,18 +1401,17 @@
 
             if (matches.size > 0) { 
                 tempMulCoords.forEach(key => matches.add(key));
-                let totalMul = gameData.accumulatedMultiplier + spinMultipliers;
-                if (totalMul < 1) totalMul = 1;
+                
+                /* ★ V13.70 修正：倍數不累積，當局算完即止 ★ */
+                let totalMul = (spinMultipliers > 0) ? spinMultipliers : 1;
+                // 原本的 gameData.accumulatedMultiplier 已移除
 
                 if (gameData.isFreeGame && spinMultipliers > 0) {
-                    gameData.accumulatedMultiplier += spinMultipliers; updateMultiplierUI();
+                   updateMultiplierUI(); // 僅更新顯示，不累積
                 }
 
                 let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
                 updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
-
-                /* ★ V13.61 修改：普通贏分不噴金幣，只在結束時噴 ★ */
-                // if(finalWin > 0) CoinManager.fire(finalWin); // 這一行已移除
 
                 if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
 
