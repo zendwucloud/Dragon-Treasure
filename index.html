@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.87 最終發行版)</title>
+    <title>火龍祕寶 (V13.88 高頻觸發版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -371,7 +371,6 @@
             box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); 
             padding-right: 15px;
             
-            /* 允許此區塊垂直捲動 */
             touch-action: pan-y;
             -webkit-overflow-scrolling: touch; 
         }
@@ -561,6 +560,7 @@
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
+            // ★ 解鎖音效的函式
             init: function() {
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
                 const bgmMain = document.getElementById('bgm_main');
@@ -638,6 +638,7 @@
     </script>
 
     <script>
+        /* ★ V13.83 整合：移植自 8.0 版的金幣邏輯 (尺寸放大3倍/閃光/3D翻轉/星星粒子) ★ */
         const CoinManager = {
             canvas: null,
             ctx: null,
@@ -664,6 +665,7 @@
             },
 
             fire: function(amount) {
+                /* 減少粒子數量 (優化) */
                 let count = 10; 
                 let sparkleCount = 5;
 
@@ -695,14 +697,17 @@
                         vx: (Math.random() - 0.5) * (w * 0.03), 
                         vy: -(Math.random() * h * 0.025 + h * 0.015), 
                         gravity: h * 0.0005,
+                        /* V13.66 修改：金幣尺寸放大 3 倍 (*3) */
                         size: (Math.random() * 30 + 30) * (w / 720) * 3, 
                         rotation: Math.random() * 360,
                         rSpeed: (Math.random() - 0.5) * 10,
+                        /* V13.67 翻轉參數 */
                         flip: Math.random() * Math.PI, 
                         flipSpeed: Math.random() * 0.2 + 0.1,
+                        /* V13.68 閃光參數 */
                         isFlashing: false,
                         flashTimer: 0,
-                        flashDuration: 30 
+                        flashDuration: 30 // 約 0.5 秒 (60fps)
                     };
                 } else {
                     return {
@@ -735,7 +740,8 @@
                         p.rotation += p.rSpeed;
                         p.flip += p.flipSpeed;
 
-                        if (!p.isFlashing && Math.random() < 0.05) { 
+                        /* ★ V13.69 修正：提高閃光觸發機率至 5% ★ */
+                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
                             p.isFlashing = true;
                             p.flashTimer = 0;
                         }
@@ -743,11 +749,12 @@
                         let brightness = 100; 
                         if (p.isFlashing) {
                             p.flashTimer++;
+                            // 正弦波計算亮度：100% -> 200% -> 100%
                             let progress = p.flashTimer / p.flashDuration;
                             brightness = 100 + 100 * Math.sin(progress * Math.PI);
                             
                             if (p.flashTimer >= p.flashDuration) {
-                                p.isFlashing = false; 
+                                p.isFlashing = false; // 閃爍結束
                             }
                         }
                         
@@ -755,9 +762,11 @@
                         this.ctx.translate(p.x, p.y);
                         this.ctx.rotate(p.rotation * Math.PI / 180);
                         
+                        /* 假 3D 翻轉 */
                         let scaleX = Math.cos(p.flip); 
                         this.ctx.scale(scaleX, 1);
                         
+                        /* 套用亮度濾鏡 (只針對正在閃的金幣) */
                         if (brightness > 105) {
                             this.ctx.filter = `brightness(${brightness}%)`;
                         }
@@ -772,6 +781,7 @@
                         }
                         this.ctx.restore();
                     } else {
+                        /* 閃爍粒子 */
                         p.alpha -= p.decay;
                         if(p.alpha <= 0) {
                             this.particles.splice(i, 1);
@@ -816,7 +826,8 @@
             8:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
             9:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
             10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 2.5, inBase: true, inFree: true }, 
+            /* ★ V13.88 修改：SCATTER 權重提高至 9.8 (約1/150觸發) ★ */
+            11: { type: 'scatter', weight: 9.8, inBase: true, inFree: true }, 
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -891,6 +902,7 @@
         let gridData = []; let isSpinning = false; let score = 0; 
         let promoInterval = null;
 
+        // ★ 新增：資源預載邏輯 (Loader)
         window.onload = () => {
             const imageAssets = [
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
@@ -923,6 +935,7 @@
                 }
             };
 
+            // 載入圖片
             imageAssets.forEach(src => {
                 const img = new Image();
                 img.onload = updateProgress;
@@ -930,26 +943,38 @@
                 img.src = src;
             });
 
+            // 載入音效 (簡單請求)
             audioAssets.forEach(src => {
                 const aud = new Audio();
                 aud.oncanplaythrough = updateProgress;
                 aud.onerror = updateProgress;
                 aud.src = src;
+                // 有些瀏覽器不預載 Audio，為了不卡死，我們設個 timeout 強制完成
                 setTimeout(updateProgress, 2000); 
             });
         };
 
+        // ★ 新增：點擊開始遊戲按鈕 (解鎖音效 + 進入遊戲)
         document.getElementById('btn-start-game').addEventListener('click', () => {
+            // 1. 隱藏 Loading 層
             const loadingLayer = document.getElementById('loading-layer');
             loadingLayer.classList.add('hidden');
             setTimeout(() => loadingLayer.style.display = 'none', 500);
 
+            // 2. 顯示遊戲舞台
             document.getElementById('game-stage').classList.add('loaded');
+
+            // 3. 初始化音效 (這是解鎖的關鍵！)
             AudioMgr.init();
+            
+            // 4. 初始化金幣系統
             CoinManager.init();
+
+            // 5. 執行原本的遊戲初始化
             initGameLogic();
         });
 
+        // 將原本的 window.onload 裡的邏輯移到這裡
         function initGameLogic() {
             initGrid(); fillRandom(false); updateAllUI(); 
             
@@ -987,6 +1012,7 @@
                 AudioMgr.toggle(e.target.checked);
             });
 
+            // 購買視窗按鈕
             document.getElementById('btn-buy-cancel').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
                 document.getElementById('buy-modal').classList.remove('active');
@@ -1146,6 +1172,7 @@
             }
         }
 
+        // 修改後的開啟視窗函式
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
             /* ★ V13.86: 修正為 100倍 ★ */
@@ -1158,9 +1185,12 @@
             document.getElementById('buy-modal').classList.add('active');
         }
 
+        // 真正的購買執行函式 (由 "確定購買" 按鈕觸發)
         async function executeBuy() {
             /* ★ V13.86: 修正為 100倍 ★ */
             const buyCost = gameData.bet * 100;
+            
+            // 再次檢查 (防止非同步漏洞)
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
@@ -1168,6 +1198,7 @@
             isBuyingFeature = true;
             isAutoPlay = false;
 
+            // 強制讓瀏覽器休息一下，確保視窗關閉動畫跑完
             await new Promise(r => requestAnimationFrame(r));
             await new Promise(r => setTimeout(r, 100)); 
 
@@ -1310,6 +1341,7 @@
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
+                    /* ★ V13.55: 停輪間隔改為 300ms ★ */
                     await wait(c * 300); 
                     
                     let colDiv = document.getElementById(`col-${c}`);
@@ -1371,6 +1403,7 @@
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
+                    /* JS 時間設定為 2000ms，配合 CSS 2.0s */
                     await wait(2000); 
                     
                     AudioMgr.playSFX('stop');
