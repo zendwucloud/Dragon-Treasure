@@ -500,10 +500,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    // 3. 禁止手指拖若是為了滾動畫面 (防止橡皮筋效果)
-    // 注意：這不會影響遊戲內的點擊，只會鎖住畫面不被拖走
+    // 3. 禁止手指拖若是為了滾動畫面，但「排除」說明頁 (.info-content)
     document.body.addEventListener('touchmove', function(e) {
-        e.preventDefault();
+        // 檢查：如果手指點擊的地方是「.info-content」或它的子元素
+        if (e.target.closest('.info-content')) {
+            // 就「允許」瀏覽器執行預設滑動行為，不做任何阻擋
+            return; 
+        }
+
+        // 如果不是在說明頁裡面，就強制擋下來
+        if (e.cancelable) {
+            e.preventDefault();
+        }
     }, { passive: false });
 
     // 4. 針對 iOS Safari 的雙擊縮放再加一道鎖
