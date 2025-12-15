@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.70 倍數修正版)</title>
+    <title>火龍祕寶 (V13.80 完整修復版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body {
@@ -17,7 +17,7 @@
             user-select: none; -webkit-user-select: none;
             background-color: #000;
             touch-action: none; 
-            -ms-touch-action: none; /* 相容舊版 IE/Edge */
+            -ms-touch-action: none;
         }
 
         .stage {
@@ -27,7 +27,7 @@
             max-width: 100vw;
             aspect-ratio: 720/1280;
             background-color: transparent; 
-            opacity: 0; /* 預設隱藏，載入完才顯示 */
+            opacity: 0; 
             transition: opacity 0.5s ease-in;
         }
         .stage.loaded { opacity: 1; }
@@ -50,148 +50,68 @@
             aspect-ratio: 720/1280;
             display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
         }
-
-        .loading-visual {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: 0; border-radius: 0; 
-        }
-
-        .loading-bottom-ui {
-            position: relative; z-index: 10; width: 85%; margin-bottom: 8%;
-            display: flex; flex-direction: column; align-items: center; text-align: center;
-        }
-
-        .loading-text { 
-            font-family: 'Arial Black', sans-serif; color: #ffd700; font-size: 2.2vh; 
-            margin-bottom: 1.5vh; text-shadow: 0 0 5px #000, 0 0 10px #ff4500; letter-spacing: 1px; 
-        }
-        
-        .progress-bar-bg {
-            width: 100%; height: 1.5vh; background: rgba(0, 0, 0, 0.6); 
-            border: 2px solid #ffd700; border-radius: 10px; overflow: hidden;
-            box-shadow: 0 0 15px rgba(0,0,0,0.8);
-        }
-        .progress-bar-fill {
-            width: 0%; height: 100%; background: linear-gradient(90deg, #ff4500, #ffff00);
-            box-shadow: 0 0 10px #ff4500; transition: width 0.2s;
-        }
-
-        #btn-start-game {
-            margin-top: 3vh; padding: 1.5vh 6vh;
-            font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; 
-            background: linear-gradient(180deg, #ff4500, #8b0000);
-            border: 2px solid #ffd700; border-radius: 50px;
-            box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3);
-            cursor: pointer; display: none; animation: pulseBtn 1.5s infinite;
-            text-shadow: 1px 1px 2px #000;
-        }
+        .loading-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        .loading-bottom-ui { position: relative; z-index: 10; width: 85%; margin-bottom: 8%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .loading-text { font-family: 'Arial Black', sans-serif; color: #ffd700; font-size: 2.2vh; margin-bottom: 1.5vh; text-shadow: 0 0 5px #000, 0 0 10px #ff4500; letter-spacing: 1px; }
+        .progress-bar-bg { width: 100%; height: 1.5vh; background: rgba(0, 0, 0, 0.6); border: 2px solid #ffd700; border-radius: 10px; overflow: hidden; box-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        .progress-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff4500, #ffff00); box-shadow: 0 0 10px #ff4500; transition: width 0.2s; }
+        #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: none; animation: pulseBtn 1.5s infinite; text-shadow: 1px 1px 2px #000; }
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
 
-
         /* --- 遊戲內部 CSS --- */
-        #bg-video {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: 0; filter: brightness(0.75);
-            transition: filter 1.0s ease-in-out;
-        }
+        #bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(0.75); transition: filter 1.0s ease-in-out; }
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
         .fire-effect { display: none; }
         .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
-        @keyframes firePulse {
-            0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); }
-            100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); }
-        }
+        @keyframes firePulse { 0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); } 100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); } }
 
-        .ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url('UI.png'); 
-            background-size: 100% 100%; background-position: center; background-repeat: no-repeat;
-            z-index: 1; pointer-events: none;
-        }
-
-        /* --- 獨立黑色遮罩層 (Level 1) --- */
-        #fg-mask {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); 
-            z-index: 2500; 
-            opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out;
-        }
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('UI.png'); background-size: 100% 100%; z-index: 1; pointer-events: none; }
+        #fg-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2500; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
         #fg-mask.active { opacity: 1; pointer-events: auto; }
         #fg-mask.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
+        #coin-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2600; pointer-events: none; }
 
-        /* --- Canvas 金幣層 (Level 2: 夾心層) --- */
-        #coin-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2600; 
-            pointer-events: none; 
-        }
-
-        /* --- 按鈕參數 (鎖定) --- */
-        .phone-button {
-            position: absolute; left: 2%; top: 2%; width: 9%; 
-            cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
-            transition: transform 0.1s;
-        }
+        /* 按鈕與卷軸 */
+        .phone-button { position: absolute; left: 2%; top: 2%; width: 9%; cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6)); transition: transform 0.1s; }
         .phone-button:active { transform: scale(0.9); }
-
-        .buy-button {
-            position: absolute; left: 2%; top: 10.5%; width: 13%; 
-            cursor: pointer; z-index: 900; transition: transform 0.1s, filter 0.2s; 
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
-        }
+        .buy-button { position: absolute; left: 2%; top: 10.5%; width: 13%; cursor: pointer; z-index: 900; transition: transform 0.1s, filter 0.2s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6)); }
         .buy-button:hover { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.1); }
         .buy-button:active { transform: scale(0.92); }
         .free-mode .buy-button { display: none; }
 
-        .reel-viewport {
-            position: absolute; top: 21.95%; left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10;
-            will-change: transform; 
-        }
+        .reel-viewport { position: absolute; top: 21.95%; left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10; will-change: transform; }
         .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; padding: 0; overflow: visible; }
         .column { position: relative; width: 18.89%; height: 100%; display: block; z-index: 1; transition: box-shadow 0.3s; }
-
-        .reel-strip { 
-            position: absolute; bottom: 0; left: 0; width: 100%; 
-            display: flex; flex-direction: column-reverse; 
-            will-change: transform; 
-            transform: translate3d(0, 0, 0); 
-            backface-visibility: hidden; 
-            perspective: 1000px;
-            z-index: 5; 
-        }
-        
-        /* 時間 2.0s 配合 JS */
+        .reel-strip { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column-reverse; will-change: transform; transform: translate3d(0, 0, 0); backface-visibility: hidden; perspective: 1000px; z-index: 5; }
         .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
-        
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; margin-bottom: -1px; position: relative; z-index: 10; }
-        .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; }
+        .reel-strip .symbol { flex: 1; height: auto; min-height: 0; }
         .column > .symbol { position: absolute; height: 33.333%; left: 0; transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1.3); }
         .symbol[data-row="0"] { bottom: 0; } .symbol[data-row="1"] { bottom: 33.333%; } .symbol[data-row="2"] { bottom: 66.666%; }
 
-        /* SCATTER & WILD CSS */
-        .sym-scatter { background-image: url('SCATTER.png'); width: 115%; height: 100%; background-position: 0% 0%; background-size: 100% 100%; background-repeat: no-repeat; margin-left: -7.5%; left: 0; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
-        @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
-        .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; background-position: 0% 0%; transition: none !important; will-change: background-position; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
+        /* 特效符號 */
+        .sym-scatter { background-image: url('SCATTER.png'); width: 115%; height: 100%; margin-left: -7.5%; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
+        .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
         .sym-scatter.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('SCATTER_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
-        .ghost-layer { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0.001; z-index: -999; pointer-events: none; }
-        .ghost-layer .sym-scatter.active { animation-play-state: running !important; }
-        @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
-        .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
-        .sym-1.active { background-image: url('s1_sprite.png') !important; } .sym-2.active { background-image: url('s2_sprite.png') !important; } .sym-3.active { background-image: url('s3_sprite.png') !important; } .sym-4.active { background-image: url('s4_sprite.png') !important; } .sym-5.active { background-image: url('s5_sprite.png') !important; }
-        .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 600 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
-        .sym-mul.active::after { content: ""; position: absolute; width: 110%; left: -5%; height: 40%; bottom: 2%; background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 605; animation: wildPop 0.8s ease-in-out infinite alternate; }
-        .sym-20.active::after { background-image: url('x2_word.png'); } .sym-21.active::after { background-image: url('x10_word.png'); } .sym-22.active::after { background-image: url('x25_word.png'); } .sym-23.active::after { background-image: url('x100_word.png'); }
-        .sym-wild { background-image: url('WILD.png'); width: 115%; height: 100%; background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; margin-left: -7.5%; left: 0; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
-        .sym-wild.active { background-image: url('dragon_sprite.png'); background-size: 2800% 100%; background-position: 0 0; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; }
+        @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        
+        .sym-wild { background-image: url('WILD.png'); width: 115%; height: 100%; margin-left: -7.5%; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
+        .sym-wild.active { background-image: url('dragon_sprite.png'); background-size: 2800% 100%; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; }
         .sym-wild.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('WILD_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
         @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
-        .sym-mul { z-index: 150; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; }
-        .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
+
+        /* 一般符號動畫 */
+        @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
+        .sym-1.active { background-image: url('s1_sprite.png') !important; } .sym-2.active { background-image: url('s2_sprite.png') !important; } .sym-3.active { background-image: url('s3_sprite.png') !important; } .sym-4.active { background-image: url('s4_sprite.png') !important; } .sym-5.active { background-image: url('s5_sprite.png') !important; }
+        
+        /* 贏分特效 */
         @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
-        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; } .sym-wild.anim-win, .sym-wild.active, .sym-scatter.anim-win { z-index: 600 !important; }
+        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; }
+        .sym-wild.anim-win, .sym-wild.active, .sym-scatter.anim-win { z-index: 600 !important; }
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
         .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
 
@@ -203,123 +123,67 @@
         #ui-free-spins, #ui-multiplier { display: none !important; }
         #ui-message-bar { position: absolute; bottom: 26.7%; left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
         #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
-        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
+        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; }
         .style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
-        .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
         .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } @keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .anim-scroll { animation: scrollPass 10s linear forwards; } @keyframes scrollPass { 0% { transform: translateX(100%); opacity: 0; } 15% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-150%); opacity: 1; } }
         .text-pop { transform: translateX(50%) scale(1.3) !important; } .text-pop-center { transform: scale(1.3) !important; }
-        
-        /* Spin 按鈕 & 旋轉動畫 */
-        .spin-trigger { 
-            position: absolute; 
-            bottom: 11.6%; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 18.8%; 
-            height: 11%;
-            border-radius: 50%; 
-            cursor: pointer; 
-            z-index: 999; 
-            display: flex; justify-content: center; align-items: center; 
-            background-color: rgba(255, 0, 0, 0); 
-        }
-        #spin-icon {
-            width: 130%; height: 130%; object-fit: contain;
-            animation: spinSlow 20s linear infinite; 
-        }
-        #spin-icon.fast {
-            animation: spinFast 0.5s linear infinite !important; 
-        }
+
+        /* 旋轉按鈕 */
+        .spin-trigger { position: absolute; bottom: 11.6%; left: 50%; transform: translateX(-50%); width: 18.8%; height: 11%; border-radius: 50%; cursor: pointer; z-index: 999; display: flex; justify-content: center; align-items: center; }
+        #spin-icon { width: 130%; height: 130%; object-fit: contain; animation: spinSlow 20s linear infinite; }
+        #spin-icon.fast { animation: spinFast 0.5s linear infinite !important; }
         @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
         @keyframes spinFast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
 
-        /* 底部按鈕參數 */
-        .click-area { 
-            position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; 
-            background-color: rgba(255, 0, 0, 0); 
-            width: 3.8vh; height: 3.8vh; 
-        }
+        /* 控制按鈕區 */
+        .click-area { position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; background-color: rgba(255, 0, 0, 0); width: 3.8vh; height: 3.8vh; }
         #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
         #btn-plus { right: 33.4%; bottom: 8.8%; transform: translateX(50%); }
-        
-        #btn-auto { 
-            position: absolute; right: 40.5%; bottom: 7.5%; 
-            width: 10vh; height: 2vh; 
-            background-color: rgba(255, 0, 0, 0); 
-            border: 0px solid red; border-radius: 50%; 
-            z-index: 1000; cursor: pointer; 
-        }
+        #btn-auto { position: absolute; right: 40.5%; bottom: 7.5%; width: 10vh; height: 2vh; background-color: rgba(0,0,0,0); z-index: 1000; cursor: pointer; }
 
-        /* V13.54 微幅回彈 */
-        @keyframes landBounce { 
-            0% { transform: translateY(-7.5%); opacity: 1; } 
-            50% { transform: translateY(6%); } 
-            75% { transform: translateY(-2%); } 
-            100% { transform: translateY(0); } 
-        }
-
-        /* --- 報獎視窗層級 (Level 3) --- */
-        #fg-end-modal { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: transparent; 
-            z-index: 2700; /* 最上層 */
-            display: flex; justify-content: center; align-items: center; 
-            opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; 
-        }
+        /* 報獎與選單 */
+        #fg-end-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2700; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
         #fg-end-modal.active { opacity: 1; pointer-events: auto; }
         #fg-end-modal.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
-        
-        #fg-end-modal .content-wrapper { text-align: center; position: relative; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; width: 100%; }
-        #fg-end-modal .win-title { width: 80%; height: auto; display: block; margin: 0 auto 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
-        #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: 11vh; color: #FFFF00; margin-top: -3vh; text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000, -2px -2px 0 #ff3000, 2px -2px 0 #ff3000, -2px 2px 0 #ff3000, 6px 6px 0 #850000, 8px 8px 5px rgba(0,0,0,0.5); letter-spacing: 2px; white-space: nowrap; transition: font-size 0.3s ease-out; }
+        #fg-end-modal .content-wrapper { text-align: center; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s forwards; width: 100%; }
+        #fg-end-modal .win-title { width: 80%; display: block; margin: 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
+        #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: 11vh; color: #FFFF00; margin-top: -3vh; text-shadow: 3px 0 0 #ff3000, 2px 2px 0 #ff3000, 6px 6px 0 #850000; letter-spacing: 2px; }
         @keyframes popIn { 0% { transform: scale(0) translateY(-10%); } 100% { transform: scale(1) translateY(-10%); } }
 
-        /* 底部滑出選單 (Menu) */
-        #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; z-index: 2400; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; z-index: 2400; transition: bottom 0.3s; }
         #menu-modal.active { bottom: 0; }
         #menu-bg { width: 100%; display: block; }
-        
-        .menu-click-area { 
-            position: absolute; 
-            background-color: rgba(255, 0, 0, 0); 
-            border: 0px solid red; cursor: pointer; 
-        }
+        .menu-click-area { position: absolute; background-color: rgba(0,0,0,0); cursor: pointer; }
         #btn-menu-info { left: 14%; top: 23%; width: 13%; height: 9%; }
         #btn-menu-setting { left: 33%; top: 23%; width: 13%; height: 9%; }
         #btn-menu-home { left: 52%; top: 23%; width: 13%; height: 9%; }
         #btn-menu-close-bottom { left: 38.5%; bottom: 1%; width: 23%; height: 5%; }
 
-        /* 說明頁 (Info Modal) */
+        /* 說明頁 (Info Modal) - 這裡是最關鍵的修正 */
         #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #info-modal.active { display: flex; opacity: 1; }
+        
         .info-content { 
-    /* --- 原有外觀設定 --- */
-    background: linear-gradient(180deg, #6a0dad 0%, #3a005f 100%); 
-    width: 90%; height: 80%; border-radius: 20px; border: 2px solid #8a2be2; 
-    padding: 20px; 
-    
-    /* --- 滑動功能 (保持不變) --- */
-    overflow-y: auto;          
-    touch-action: pan-y;       
-    -webkit-overflow-scrolling: touch;
-
-    /* --- ★ 新增：修正文字顏色與排版 ★ --- */
-    color: #fff;               /* 強制所有說明文字預設為白色 */
-    text-align: center;        /* 讓大部分內容置中 */
-}
-        .info-content::-webkit-scrollbar { width: 12px; }
-        .info-content::-webkit-scrollbar-track { background: transparent; margin-block: 10px; }
-        .info-content::-webkit-scrollbar-thumb { background-color: rgba(255, 215, 0, 0.6); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
-        .info-content::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 215, 0, 1.0); }
+            background: linear-gradient(180deg, #6a0dad 0%, #3a005f 100%); 
+            width: 90%; height: 80%; border-radius: 20px; border: 2px solid #8a2be2; 
+            padding: 20px; 
+            overflow-y: auto;          
+            touch-action: pan-y;       
+            -webkit-overflow-scrolling: touch;
+            color: #fff;               
+            text-align: center;        
+        }
+        
         .info-title { font-size: 3vh; color: #7cfc00; margin-bottom: 2vh; text-shadow: 0 0 5px #000; }
         .paytable-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
-        .paytable-item { background: rgba(40, 10, 60, 0.6); border: 1px solid #9932cc; border-radius: 10px; padding: 5px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; height: 14vh; box-shadow: inset 0 0 10px rgba(138, 43, 226, 0.2); }
+        .paytable-item { background: rgba(40, 10, 60, 0.6); border: 1px solid #9932cc; border-radius: 10px; padding: 5px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; height: 14vh; }
         .paytable-item img { width: auto; height: 85%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
         .paytable-info { width: 56%; display: flex; flex-direction: column; justify-content: center; padding-right: 2px; }
         .paytable-row { display: flex; justify-content: space-between; align-items: center; width: 100%; line-height: 1.2; font-family: 'Arial Black', sans-serif; font-size: 3.6vh; }
         .paytable-mul { color: #fff; font-weight: bold; }
         .paytable-val { color: #ffd700; text-align: right; text-shadow: 1px 1px 0 #000; }
+
         .special-rule-block { grid-column: 1 / -1; background: linear-gradient(90deg, #2e004d 0%, #1a0b2e 100%); border: 2px solid #fff; border-radius: 12px; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding: 8px 12px; margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); min-height: 14vh; }
         .special-fixed-height { height: 14vh; }
         .special-img { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-right: 4%; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 2%; height: 100%; }
@@ -329,23 +193,40 @@
         .desc-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.5vh; font-weight: bold; color: #ddd; border-bottom: 1px dashed rgba(255,255,255,0.15); padding: 3px 0; }
         .desc-row:last-child { border-bottom: none; }
         .c-yellow { color: #ffd700; } .c-cyan { color: #00ffff; } .c-red { color: #ff4500; text-shadow: 0 0 2px #ff0000; } .c-white { color: #ffffff; } .c-gray { color: #aaaaaa; font-size: 1.3vh; }
+
+        /* 關閉按鈕 */
         .close-btn { 
-    /* --- ★ 修改：讓按鈕水平置中 ★ --- */
-    margin: 20px auto 0 auto;  /* 上距20px, 左右自動(置中), 下距0 */
-    width: fit-content;        /* 寬度隨文字內容調整，不要佔滿整行 */
-    display: block;            /* 確保 margin auto 生效 */
+            margin: 20px auto 0 auto; 
+            width: fit-content; 
+            display: block; 
+            background-color: #00bfff; 
+            padding: 10px 30px; 
+            border-radius: 50px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: 0 4px 0 #008080; 
+        }
+        .close-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008080; }
 
-    /* --- 原有外觀保持不變 --- */
-    background-color: #00bfff; 
-    padding: 10px 30px; 
-    border-radius: 50px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    box-shadow: 0 4px 0 #008080; 
-}
-.close-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008080; }
+        /* --- ★ 這裡就是被修復好的規則列表樣式 ★ --- */
+        ul.rules-list {
+            display: inline-block;
+            text-align: left;
+            list-style-type: none;
+            padding: 0;
+            margin: 20px auto;
+            color: #ffffff;
+            line-height: 1.6;
+            font-size: 1.6vh;
+            width: 95%;
+        }
+        ul.rules-list li {
+            border-left: 4px solid #ffd700;
+            padding-left: 12px;
+            margin-bottom: 15px;
+        }
 
-        /* 設定頁 (Setting Modal) */
+        /* 設定頁與購買視窗 */
         #setting-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2600; display: none; align-items: center; justify-content: center; }
         #setting-modal.active { display: flex; }
         .setting-box { width: 80%; background: #9370db; border-radius: 15px; border: 3px solid #4b0082; padding: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
@@ -356,14 +237,12 @@
         input:checked + .slider { background-color: #ffd700; }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        /* 購買確認視窗樣式 */
         #buy-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2800; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #buy-modal.active { display: flex; opacity: 1; }
-        .buy-box { width: 75%; background: linear-gradient(180deg, #4b0082 0%, #2e004d 100%); border-radius: 15px; border: 2px solid #ffd700; padding: 25px 20px; text-align: center; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .buy-box { width: 75%; background: linear-gradient(180deg, #4b0082 0%, #2e004d 100%); border-radius: 15px; border: 2px solid #ffd700; padding: 25px 20px; text-align: center; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); transform: scale(0.8); transition: transform 0.3s; }
         #buy-modal.active .buy-box { transform: scale(1); }
         .buy-actions { display: flex; justify-content: space-around; margin-top: 15px; }
-        .buy-actions .close-btn { margin-top: 0; padding: 8px 20px; font-size: 1.8vh; }
-
+        @keyframes landBounce { 0% { transform: translateY(-7.5%); opacity: 1; } 50% { transform: translateY(6%); } 75% { transform: translateY(-2%); } 100% { transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -373,58 +252,35 @@
             <img src="loading.jpg" class="loading-visual">
             <div class="loading-bottom-ui">
                 <div class="loading-text" id="loading-text">Loading... 0%</div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="progress-fill"></div>
-                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
                 <div id="btn-start-game">★ 點擊開始遊戲 ★</div>
             </div>
         </div>
     </div>
 
     <div class="stage" id="game-stage">
-        <video id="bg-video" autoplay loop muted playsinline>
-            <source src="火龍背景_待機.mp4" type="video/mp4">
-        </video>
-
+        <video id="bg-video" autoplay loop muted playsinline><source src="火龍背景_待機.mp4" type="video/mp4"></video>
         <div class="ui-layer"></div>
         <div class="fire-effect"></div>
-        
         <div id="fg-mask"></div>
-
         <canvas id="coin-canvas"></canvas>
-        
         <img id="btn-phone" src="phone.png" class="phone-button">
         <img id="btn-buy" src="buy_btn.png" class="buy-button">
-        
-        <div class="reel-viewport">
-            <div class="grid-container" id="grid"></div>
-        </div>
-
+        <div class="reel-viewport"><div class="grid-container" id="grid"></div></div>
         <div id="ui-credit" class="value-text">100,000.00</div>
         <div id="ui-win" class="value-text">0.00</div>
         <div id="ui-bet" class="value-text">100.00</div>
         <div id="ui-message-bar"><div id="msg-content">WIN 100.00</div></div>
-        
         <div id="ui-multiplier" class="value-text">x1</div>
         <div id="ui-free-spins" class="value-text">FREE SPINS: 0</div>
-
         <div class="click-area" id="btn-minus"></div>
         <div class="click-area" id="btn-plus"></div>
         <div class="click-area" id="btn-auto"></div>
-        
-        <div class="spin-trigger" id="spinBtn">
-            <img id="spin-icon" src="spin.png"> 
-        </div>
-
-        <div class="ghost-layer">
-            <div class="symbol sym-scatter active"></div>
-        </div>
+        <div class="spin-trigger" id="spinBtn"><img id="spin-icon" src="spin.png"></div>
+        <div class="ghost-layer"><div class="symbol sym-scatter active"></div></div>
 
         <div id="fg-end-modal">
-            <div class="content-wrapper">
-                <img src="you-win.png" class="win-title">
-                <div id="fg-end-score">0.00</div>
-            </div>
+            <div class="content-wrapper"><img src="you-win.png" class="win-title"><div id="fg-end-score">0.00</div></div>
         </div>
 
         <div id="menu-modal">
@@ -447,10 +303,7 @@
             <div class="setting-box">
                 <div class="info-title">設定</div>
                 <div style="color: white; font-weight: bold;">音樂/音效</div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="chk-sound" checked>
-                    <span class="slider"></span>
-                </label>
+                <label class="toggle-switch"><input type="checkbox" id="chk-sound" checked><span class="slider"></span></label>
                 <div class="close-btn" id="btn-close-setting" style="margin-top: 10px;">確定</div>
             </div>
         </div>
@@ -458,350 +311,126 @@
         <div id="buy-modal">
             <div class="buy-box">
                 <div class="info-title" style="color: #ffd700;">購買特色遊戲</div>
-                <div style="color: #fff; margin: 20px 0; font-size: 2vh; line-height: 1.5;">
-                    確定要花費 <span id="buy-price-text" style="color: #00ffff;">25,000</span> 購買嗎？<br>
-                    <span style="font-size: 1.5vh; color: #aaa;">(必定觸發免費遊戲)</span>
-                </div>
+                <div style="color: #fff; margin: 20px 0; font-size: 2vh; line-height: 1.5;">確定要花費 <span id="buy-price-text" style="color: #00ffff;">25,000</span> 購買嗎？<br><span style="font-size: 1.5vh; color: #aaa;">(必定觸發免費遊戲)</span></div>
                 <div class="buy-actions">
                     <div class="close-btn" id="btn-buy-cancel" style="background-color: #555; box-shadow: 0 4px 0 #333;">取消</div>
                     <div class="close-btn" id="btn-buy-confirm" style="background-color: #ff4500; box-shadow: 0 4px 0 #8b0000;">確定購買</div>
                 </div>
             </div>
         </div>
-
     </div>
 
     <div id="audio-pool" style="display:none;">
         <audio id="bgm_main" src="bgm_main.mp3" loop></audio>
         <audio id="bgm_free" src="bgm_free.mp3" loop></audio>
         <audio id="sfx_spin_1" src="sfx_spin.mp3"></audio>
-        <audio id="sfx_spin_2" src="sfx_spin.mp3"></audio>
-        <audio id="sfx_spin_3" src="sfx_spin.mp3"></audio>
         <audio id="sfx_stop_1" src="sfx_stop.mp3"></audio>
-        <audio id="sfx_stop_2" src="sfx_stop.mp3"></audio>
-        <audio id="sfx_stop_3" src="sfx_stop.mp3"></audio>
         <audio id="sfx_win_1" src="sfx_win.mp3"></audio>
-        <audio id="sfx_win_2" src="sfx_win.mp3"></audio>
-        <audio id="sfx_win_3" src="sfx_win.mp3"></audio>
         <audio id="sfx_win_free_1" src="sfx_win_free.mp3"></audio>
-        <audio id="sfx_win_free_2" src="sfx_win_free.mp3"></audio>
-        <audio id="sfx_win_free_3" src="sfx_win_free.mp3"></audio>
         <audio id="sfx_bigwin_1" src="sfx_bigwin.mp3"></audio>
-        <audio id="sfx_bigwin_2" src="sfx_bigwin.mp3"></audio>
-        <audio id="sfx_bigwin_3" src="sfx_bigwin.mp3"></audio>
         <audio id="sfx_scatter_1" src="sfx_scatter.mp3"></audio>
-        <audio id="sfx_scatter_2" src="sfx_scatter.mp3"></audio>
-        <audio id="sfx_scatter_3" src="sfx_scatter.mp3"></audio>
         <audio id="sfx_click_1" src="sfx_click.mp3"></audio>
-        <audio id="sfx_click_2" src="sfx_click.mp3"></audio>
-        <audio id="sfx_click_3" src="sfx_click.mp3"></audio>
         <audio id="sfx_dragon_1" src="sfx_dragon.mp3"></audio>
-        <audio id="sfx_dragon_2" src="sfx_dragon.mp3"></audio>
-        <audio id="sfx_dragon_3" src="sfx_dragon.mp3"></audio>
         <audio id="sfx_youWin_1" src="you-win.mp3"></audio>
     </div>
 
     <script>
         /* --- ★ Mobile Gestures Blocker (防止手機縮放/移動) ★ --- */
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. 禁止雙指縮放 (Pinch to Zoom)
-    document.addEventListener('gesturestart', function(e) {
-        e.preventDefault();
-    });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('touchmove', (e) => { if (e.scale !== 1) e.preventDefault(); }, { passive: false });
+            
+            // ★ 允許說明頁滑動的關鍵代碼 ★
+            document.body.addEventListener('touchmove', function(e) {
+                if (e.target.closest('.info-content')) return; 
+                if (e.cancelable) e.preventDefault();
+            }, { passive: false });
+            
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) event.preventDefault();
+                lastTouchEnd = now;
+            }, false);
+        });
 
-    // 2. 禁止雙擊縮放 (Double Tap to Zoom) & 滾動
-    // 使用 { passive: false } 是關鍵，否則 preventDefault 會無效
-    document.addEventListener('touchmove', function(e) {
-        if (e.scale !== 1) { 
-            e.preventDefault(); 
-        }
-    }, { passive: false });
-
-    // 3. 禁止手指拖若是為了滾動畫面，但「排除」說明頁 (.info-content)
-    document.body.addEventListener('touchmove', function(e) {
-        // 檢查：如果手指點擊的地方是「.info-content」或它的子元素
-        if (e.target.closest('.info-content')) {
-            // 就「允許」瀏覽器執行預設滑動行為，不做任何阻擋
-            return; 
-        }
-
-        // 如果不是在說明頁裡面，就強制擋下來
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    // 4. 針對 iOS Safari 的雙擊縮放再加一道鎖
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
-        const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-});
         const AudioMgr = {
             enabled: true,
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
-
-            // ★ 解鎖音效的函式
             init: function() {
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
                 const bgmMain = document.getElementById('bgm_main');
                 const bgmFree = document.getElementById('bgm_free');
                 if(bgmMain) bgmMain.volume = 0.8;
                 if(bgmFree) bgmFree.volume = 1.0;
-                
-                // 嘗試播放所有音效一小段，然後暫停 (強制解鎖 AudioContext)
-                document.querySelectorAll('audio').forEach(a => {
-                    a.volume = 0;           
-                    a.play().catch(()=>{}); 
-                    setTimeout(() => { 
-                        a.pause();          
-                        a.currentTime = 0; 
-                        a.volume = 1.0;     
-                    }, 50);
-                });
-
-                // 開始播放背景音樂
+                document.querySelectorAll('audio').forEach(a => { a.volume = 0; a.play().catch(()=>{}); setTimeout(() => { a.pause(); a.currentTime = 0; a.volume = 1.0; }, 50); });
                 if (this.enabled) {
                     let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
                     let bgm = document.getElementById(bgmId);
-                    if(bgm) {
-                        bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
-                        bgm.play().catch(()=>{});
-                    }
+                    if(bgm) { bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; bgm.play().catch(()=>{}); }
                 }
             },
-            
             playBGM: function(type) {
                 if (!this.enabled) return;
                 document.getElementById('bgm_main').pause();
                 document.getElementById('bgm_free').pause();
                 let targetId = (type === 'free') ? 'bgm_free' : 'bgm_main';
                 let target = document.getElementById(targetId);
-                if(target) {
-                    target.currentTime = 0;
-                    target.volume = (type === 'free') ? 1.0 : 0.8;
-                    target.play().catch(()=>{});
-                }
+                if(target) { target.currentTime = 0; target.volume = (type === 'free') ? 1.0 : 0.8; target.play().catch(()=>{}); }
             },
-
             playSFX: function(name) {
                 if (!this.enabled) return;
                 let key = name;
                 if(name === 'winFree') key = 'win_free';
                 if(name === 'bigWin') key = 'bigwin';
-
-                if (!this.poolIndices[key]) this.poolIndices[key] = 1;
-
-                let idx = this.poolIndices[key];
-                let id = `sfx_${key}_${idx}`;
+                let id = `sfx_${key}_1`; 
                 let audio = document.getElementById(id);
-
-                if (!audio) {
-                    console.warn(`Audio Channel Missing: ${id}. Fallback to Channel 1.`);
-                    audio = document.getElementById(`sfx_${key}_1`);
-                }
-
-                if (audio) {
-                    audio.currentTime = 0;
-                    audio.play().catch(()=>{});
-                    this.poolIndices[key] = (idx % 3) + 1; 
-                }
+                if (audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
             },
-
             toggle: function(state) {
                 this.enabled = state;
-                if(!this.enabled) {
-                    document.querySelectorAll('audio').forEach(a => a.pause());
-                } else {
-                    if(gameData.isFreeGame) this.playBGM('free');
-                    else this.playBGM('main');
-                }
+                if(!this.enabled) { document.querySelectorAll('audio').forEach(a => a.pause()); } 
+                else { if(gameData.isFreeGame) this.playBGM('free'); else this.playBGM('main'); }
             }
         };
-    </script>
 
-    <script>
         const CoinManager = {
-            canvas: null,
-            ctx: null,
-            particles: [],
-            isRunning: false,
-            coinImg: new Image(),
-            imgLoaded: false,
-
+            canvas: null, ctx: null, particles: [], isRunning: false, coinImg: new Image(), imgLoaded: false,
             init: function() {
                 this.canvas = document.getElementById('coin-canvas');
                 this.ctx = this.canvas.getContext('2d');
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                this.coinImg.src = 'coin.png';
-                this.coinImg.onload = () => { this.imgLoaded = true; };
+                this.resize(); window.addEventListener('resize', () => this.resize());
+                this.coinImg.src = 'coin.png'; this.coinImg.onload = () => { this.imgLoaded = true; };
             },
-
-            resize: function() {
-                if(this.canvas) {
-                    this.canvas.width = this.canvas.offsetWidth;
-                    this.canvas.height = this.canvas.offsetHeight;
-                }
-            },
-
+            resize: function() { if(this.canvas) { this.canvas.width = this.canvas.offsetWidth; this.canvas.height = this.canvas.offsetHeight; } },
             fire: function(amount) {
-                /* 減少粒子數量 (優化) */
-                let count = 10; 
-                let sparkleCount = 5;
-
-                if (amount > gameData.bet * 5) { count = 20; sparkleCount = 10; }
-                if (amount > gameData.bet * 10) { count = 40; sparkleCount = 20; }
-
-                if (!this.isRunning) {
-                    this.isRunning = true;
-                    this.animate();
-                }
-
-                for (let i = 0; i < count; i++) {
-                    this.particles.push(this.createParticle('coin'));
-                }
-                for (let i = 0; i < sparkleCount; i++) {
-                    this.particles.push(this.createParticle('sparkle'));
-                }
+                let count = 10; if (amount > gameData.bet * 5) count = 20; if (amount > gameData.bet * 10) count = 40;
+                if (!this.isRunning) { this.isRunning = true; this.animate(); }
+                for (let i = 0; i < count; i++) this.particles.push(this.createParticle('coin'));
             },
-
             createParticle: function(type) {
-                const w = this.canvas.width;
-                const h = this.canvas.height;
-                
-                if (type === 'coin') {
-                    return {
-                        type: 'coin',
-                        x: w / 2, 
-                        y: h + 50, 
-                        vx: (Math.random() - 0.5) * (w * 0.03), 
-                        vy: -(Math.random() * h * 0.025 + h * 0.015), 
-                        gravity: h * 0.0005,
-                        /* V13.66 修改：金幣尺寸放大 3 倍 (*3) */
-                        size: (Math.random() * 30 + 30) * (w / 720) * 3, 
-                        rotation: Math.random() * 360,
-                        rSpeed: (Math.random() - 0.5) * 10,
-                        /* V13.67 翻轉參數 */
-                        flip: Math.random() * Math.PI, 
-                        flipSpeed: Math.random() * 0.2 + 0.1,
-                        /* V13.68 閃光參數 */
-                        isFlashing: false,
-                        flashTimer: 0,
-                        flashDuration: 30 // 約 0.5 秒 (60fps)
-                    };
-                } else {
-                    return {
-                        type: 'sparkle',
-                        x: w / 2 + (Math.random() - 0.5) * 50,
-                        y: h + 50,
-                        vx: (Math.random() - 0.5) * (w * 0.04),
-                        vy: -(Math.random() * h * 0.028 + h * 0.01),
-                        gravity: h * 0.0002,
-                        size: Math.random() * 5 + 2, 
-                        alpha: 1,
-                        decay: Math.random() * 0.02 + 0.01
-                    };
-                }
+                const w = this.canvas.width; const h = this.canvas.height;
+                return { type: 'coin', x: w / 2, y: h + 50, vx: (Math.random() - 0.5) * (w * 0.03), vy: -(Math.random() * h * 0.025 + h * 0.015), gravity: h * 0.0005, size: (Math.random() * 30 + 30) * (w / 720) * 3, rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 10, flip: Math.random() * Math.PI, flipSpeed: Math.random() * 0.2 + 0.1 };
             },
-
             animate: function() {
                 if (!this.isRunning) return;
-                
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
                 for (let i = 0; i < this.particles.length; i++) {
                     let p = this.particles[i];
-                    
-                    p.vy += p.gravity;
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    if (p.type === 'coin') {
-                        p.rotation += p.rSpeed;
-                        p.flip += p.flipSpeed;
-
-                        /* ★ V13.69 修正：提高閃光觸發機率至 5% ★ */
-                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
-                            p.isFlashing = true;
-                            p.flashTimer = 0;
-                        }
-
-                        let brightness = 100; 
-                        if (p.isFlashing) {
-                            p.flashTimer++;
-                            // 正弦波計算亮度：100% -> 200% -> 100%
-                            let progress = p.flashTimer / p.flashDuration;
-                            brightness = 100 + 100 * Math.sin(progress * Math.PI);
-                            
-                            if (p.flashTimer >= p.flashDuration) {
-                                p.isFlashing = false; // 閃爍結束
-                            }
-                        }
-                        
-                        this.ctx.save();
-                        this.ctx.translate(p.x, p.y);
-                        this.ctx.rotate(p.rotation * Math.PI / 180);
-                        
-                        /* 假 3D 翻轉 */
-                        let scaleX = Math.cos(p.flip); 
-                        this.ctx.scale(scaleX, 1);
-                        
-                        /* 套用亮度濾鏡 (只針對正在閃的金幣) */
-                        if (brightness > 105) {
-                            this.ctx.filter = `brightness(${brightness}%)`;
-                        }
-
-                        if (this.imgLoaded) {
-                            this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
-                        } else {
-                            this.ctx.beginPath();
-                            this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
-                            this.ctx.fillStyle = '#ffd700';
-                            this.ctx.fill();
-                        }
-                        this.ctx.restore();
-                    } else {
-                        /* 閃爍粒子 */
-                        p.alpha -= p.decay;
-                        if(p.alpha <= 0) {
-                            this.particles.splice(i, 1);
-                            i--;
-                            continue;
-                        }
-                        this.ctx.save();
-                        this.ctx.globalAlpha = p.alpha;
-                        this.ctx.beginPath();
-                        this.ctx.fillStyle = (Math.random() > 0.5) ? '#ffffff' : '#ffff00'; 
-                        this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                        this.ctx.restore();
-                    }
-
-                    if (p.y > this.canvas.height + 100) {
-                        this.particles.splice(i, 1);
-                        i--;
-                    }
+                    p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.rotation += p.rSpeed; p.flip += p.flipSpeed;
+                    this.ctx.save(); this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rotation * Math.PI / 180);
+                    let scaleX = Math.cos(p.flip); this.ctx.scale(scaleX, 1);
+                    if (this.imgLoaded) this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
+                    else { this.ctx.beginPath(); this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2); this.ctx.fillStyle = '#ffd700'; this.ctx.fill(); }
+                    this.ctx.restore();
+                    if (p.y > this.canvas.height + 100) { this.particles.splice(i, 1); i--; }
                 }
-
-                if (this.particles.length > 0) {
-                    requestAnimationFrame(() => this.animate());
-                } else {
-                    this.isRunning = false;
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                }
+                if (this.particles.length > 0) requestAnimationFrame(() => this.animate()); else { this.isRunning = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
             }
         };
-    </script>
 
-    <script>
         const config = { cols: 5, rows: 3 }; 
-        
         const SYMBOLS = {
             1:  { type: 'high', payouts: {3: 3, 4: 10, 5: 30},  weight: 8, inBase: true, inFree: true }, 
             2:  { type: 'high', payouts: {3: 2.5, 4: 8, 5: 25}, weight: 10, inBase: true, inFree: true },
@@ -820,442 +449,152 @@ document.addEventListener('DOMContentLoaded', () => {
             23: { type: 'mul', val: 100, weight: 0, inBase: false, inFree: true }  
         };
 
-        let poolBase = []; 
-        let poolFree = []; 
-        let totalWeightBase = 0; 
-        let totalWeightFree = 0;
-        let isBuyingFeature = false; 
-        let buyTriggerType = 0; 
-        let firstInteraction = false;
-        
-        let isAutoPlay = false;
+        let poolBase = [], poolFree = [], totalWeightBase = 0, totalWeightFree = 0;
+        let isBuyingFeature = false, buyTriggerType = 0, firstInteraction = false, isAutoPlay = false;
+        let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
+        let gridData = [], isSpinning = false, promoInterval = null;
 
         function initBasePool() {
-            poolBase = [];
-            totalWeightBase = 0;
+            poolBase = []; totalWeightBase = 0;
             for (let id in SYMBOLS) {
                 let s = SYMBOLS[id];
-                let numId = parseInt(id);
-                if (s.inBase) {
-                    poolBase.push({ id: numId, weight: s.weight });
-                    totalWeightBase += s.weight;
-                }
+                if (s.inBase) { poolBase.push({ id: parseInt(id), weight: s.weight }); totalWeightBase += s.weight; }
             }
         }
         initBasePool(); 
 
         function updateFreeGameWeights(scatterCount) {
-            poolFree = [];
-            totalWeightFree = 0;
-            const targetTotalWeight = 1000;
-            const symbolQuota = 750; 
-            const multiplierQuota = 250; 
-
+            poolFree = []; totalWeightFree = 0;
+            const symbolQuota = 750, multiplierQuota = 250; 
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            let originalSum = 0;
-            connectableSymbols.forEach(id => { originalSum += SYMBOLS[id].weight; });
+            let originalSum = 0; connectableSymbols.forEach(id => { originalSum += SYMBOLS[id].weight; });
             
             connectableSymbols.forEach(id => {
-                let s = SYMBOLS[id];
-                let w = (s.weight / originalSum) * symbolQuota;
-                if (id <= 3) w *= 0.3; 
-                if (id === 4 || id === 5) w *= 1.2; 
-                if (id === 10) w *= 0.55; 
-                if (scatterCount === 3 && id === 10) w *= 1.2; 
-                if (id === 11) w = 0.1; 
-
-                poolFree.push({ id: id, weight: w });
-                totalWeightFree += w;
+                let w = (SYMBOLS[id].weight / originalSum) * symbolQuota;
+                if (id <= 3) w *= 0.3; if (id === 4 || id === 5) w *= 1.2; if (id === 10) w *= 0.55; 
+                if (scatterCount === 3 && id === 10) w *= 1.2; if (id === 11) w = 0.1; 
+                poolFree.push({ id: id, weight: w }); totalWeightFree += w;
             });
 
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
-            
-            if (scatterCount === 3) {
-                w2 = multiplierQuota * 0.95; w10 = multiplierQuota * 0.05;
-            } else if (scatterCount === 4) {
-                w2 = multiplierQuota * 0.90; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.02;
-            } else {
-                w2 = multiplierQuota * 0.88; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.038; w100 = multiplierQuota * 0.002;
-            }
+            if (scatterCount === 3) { w2 = multiplierQuota * 0.95; w10 = multiplierQuota * 0.05; } 
+            else if (scatterCount === 4) { w2 = multiplierQuota * 0.90; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.02; } 
+            else { w2 = multiplierQuota * 0.88; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.038; w100 = multiplierQuota * 0.002; }
             if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
             if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
             if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
             if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
         }
 
-        let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
-        let gridData = []; let isSpinning = false; let score = 0; 
-        let promoInterval = null;
-
-        // ★ 新增：資源預載邏輯 (Loader)
         window.onload = () => {
             const imageAssets = [
-                "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
-                "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
-                "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png",
-                "you-win.png", "phone.png", "gui-top.png", "spin.png",
+                "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png", "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
+                "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png", "you-win.png", "phone.png", "gui-top.png", "spin.png",
                 "background.jpg", "UI.png", "buy_btn.png", "SCATTER.png", "WILD.png", "WILD_word.png", "SCATTER_word.png",
-                "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png",
-                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png"
+                "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png", "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png"
             ];
-            
-            const audioAssets = [
-                "bgm_main.mp3", "bgm_free.mp3", "sfx_spin.mp3", "sfx_stop.mp3", 
-                "sfx_win.mp3", "sfx_win_free.mp3", "sfx_bigwin.mp3", "sfx_scatter.mp3", 
-                "sfx_click.mp3", "sfx_dragon.mp3", "you-win.mp3"
-            ];
-
-            let totalAssets = imageAssets.length + audioAssets.length;
-            let loadedCount = 0;
+            const audioAssets = ["bgm_main.mp3", "bgm_free.mp3", "sfx_spin.mp3", "sfx_stop.mp3", "sfx_win.mp3", "sfx_win_free.mp3", "sfx_bigwin.mp3", "sfx_scatter.mp3", "sfx_click.mp3", "sfx_dragon.mp3", "you-win.mp3"];
+            let totalAssets = imageAssets.length + audioAssets.length, loadedCount = 0;
 
             const updateProgress = () => {
-                loadedCount++;
-                let percent = Math.floor((loadedCount / totalAssets) * 100);
+                loadedCount++; let percent = Math.floor((loadedCount / totalAssets) * 100);
                 document.getElementById('loading-text').innerText = `Loading... ${percent}%`;
                 document.getElementById('progress-fill').style.width = `${percent}%`;
-
                 if (loadedCount >= totalAssets) {
                     document.getElementById('loading-text').innerText = "載入完成！";
                     document.getElementById('btn-start-game').style.display = 'block';
                 }
             };
-
-            // 載入圖片
-            imageAssets.forEach(src => {
-                const img = new Image();
-                img.onload = updateProgress;
-                img.onerror = updateProgress; 
-                img.src = src;
-            });
-
-            // 載入音效 (簡單請求)
-            audioAssets.forEach(src => {
-                const aud = new Audio();
-                aud.oncanplaythrough = updateProgress;
-                aud.onerror = updateProgress;
-                aud.src = src;
-                // 有些瀏覽器不預載 Audio，為了不卡死，我們設個 timeout 強制完成
-                setTimeout(updateProgress, 2000); 
-            });
+            imageAssets.forEach(src => { const img = new Image(); img.onload = updateProgress; img.onerror = updateProgress; img.src = src; });
+            audioAssets.forEach(src => { const aud = new Audio(); aud.oncanplaythrough = updateProgress; aud.onerror = updateProgress; aud.src = src; setTimeout(updateProgress, 2000); });
         };
 
-        // ★ 新增：點擊開始遊戲按鈕 (解鎖音效 + 進入遊戲)
         document.getElementById('btn-start-game').addEventListener('click', () => {
-            // 1. 隱藏 Loading 層
-            const loadingLayer = document.getElementById('loading-layer');
-            loadingLayer.classList.add('hidden');
-            setTimeout(() => loadingLayer.style.display = 'none', 500);
-
-            // 2. 顯示遊戲舞台
+            document.getElementById('loading-layer').classList.add('hidden');
+            setTimeout(() => document.getElementById('loading-layer').style.display = 'none', 500);
             document.getElementById('game-stage').classList.add('loaded');
-
-            // 3. 初始化音效 (這是解鎖的關鍵！)
-            AudioMgr.init();
-            
-            // 4. 初始化金幣系統
-            CoinManager.init();
-
-            // 5. 執行原本的遊戲初始化
-            initGameLogic();
+            AudioMgr.init(); CoinManager.init(); initGameLogic();
         });
 
-        // 將原本的 window.onload 裡的邏輯移到這裡
         function initGameLogic() {
             initGrid(); fillRandom(false); updateAllUI(); 
-            
-            document.getElementById('btn-phone').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('menu-modal').classList.add('active');
-            });
-            document.getElementById('btn-menu-info').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                generatePaytable();
-                document.getElementById('info-modal').classList.add('active');
-            });
-            document.getElementById('btn-menu-setting').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('setting-modal').classList.add('active');
-            });
-            document.getElementById('btn-menu-home').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('menu-modal').classList.remove('active');
-            });
-            document.getElementById('btn-menu-close-bottom').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('menu-modal').classList.remove('active');
-            });
-
-            document.getElementById('btn-close-info').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('info-modal').classList.remove('active');
-            });
-            document.getElementById('btn-close-setting').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('setting-modal').classList.remove('active');
-            });
-            document.getElementById('chk-sound').addEventListener('change', (e) => {
-                AudioMgr.toggle(e.target.checked);
-            });
-
-            // 購買視窗按鈕
-            document.getElementById('btn-buy-cancel').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('buy-modal').classList.remove('active');
-            });
-
-            document.getElementById('btn-buy-confirm').addEventListener('click', () => {
-                AudioMgr.playSFX('click');
-                document.getElementById('buy-modal').classList.remove('active');
-                executeBuy(); 
-            });
-
-            document.getElementById('spinBtn').addEventListener('click', () => {
-                handleFirstInteraction();
-                if (isAutoPlay) {
-                    isAutoPlay = false;
-                    return; 
-                }
-                document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active'));
-                AudioMgr.playSFX('click');
-                startSpin();
-            });
-
-            document.getElementById('btn-auto').addEventListener('click', (e) => {
-                handleFirstInteraction();
-                e.stopPropagation(); 
-                if (isSpinning || gameData.isFreeGame) return;
-
-                isAutoPlay = !isAutoPlay; 
-                if(isAutoPlay) {
-                    AudioMgr.playSFX('click');
-                    startSpin();
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (isAutoPlay && e.target.id !== 'btn-auto') {
-                    isAutoPlay = false;
-                }
-            }, true); 
-
-            document.getElementById('btn-plus').addEventListener('click', () => {
-                    AudioMgr.playSFX('click'); changeBet(100);
-            });
-            document.getElementById('btn-minus').addEventListener('click', () => {
-                    AudioMgr.playSFX('click'); changeBet(-100);
-            });
-            document.getElementById('btn-buy').addEventListener('click', () => {
-                handleFirstInteraction();
-                AudioMgr.playSFX('click');
-                buyFeature();
-            });
-            
+            document.getElementById('btn-phone').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('menu-modal').classList.add('active'); });
+            document.getElementById('btn-menu-info').addEventListener('click', () => { AudioMgr.playSFX('click'); generatePaytable(); document.getElementById('info-modal').classList.add('active'); });
+            document.getElementById('btn-menu-setting').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('setting-modal').classList.add('active'); });
+            document.getElementById('btn-menu-home').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('menu-modal').classList.remove('active'); });
+            document.getElementById('btn-menu-close-bottom').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('menu-modal').classList.remove('active'); });
+            document.getElementById('btn-close-info').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('info-modal').classList.remove('active'); });
+            document.getElementById('btn-close-setting').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('setting-modal').classList.remove('active'); });
+            document.getElementById('chk-sound').addEventListener('change', (e) => { AudioMgr.toggle(e.target.checked); });
+            document.getElementById('btn-buy-cancel').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); });
+            document.getElementById('btn-buy-confirm').addEventListener('click', () => { AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); executeBuy(); });
+            document.getElementById('spinBtn').addEventListener('click', () => { handleFirstInteraction(); if (isAutoPlay) { isAutoPlay = false; return; } document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active')); AudioMgr.playSFX('click'); startSpin(); });
+            document.getElementById('btn-auto').addEventListener('click', (e) => { handleFirstInteraction(); e.stopPropagation(); if (isSpinning || gameData.isFreeGame) return; isAutoPlay = !isAutoPlay; if(isAutoPlay) { AudioMgr.playSFX('click'); startSpin(); } });
+            document.addEventListener('click', (e) => { if (isAutoPlay && e.target.id !== 'btn-auto') isAutoPlay = false; }, true); 
+            document.getElementById('btn-plus').addEventListener('click', () => { AudioMgr.playSFX('click'); changeBet(100); });
+            document.getElementById('btn-minus').addEventListener('click', () => { AudioMgr.playSFX('click'); changeBet(-100); });
+            document.getElementById('btn-buy').addEventListener('click', () => { handleFirstInteraction(); AudioMgr.playSFX('click'); buyFeature(); });
             showPromoMessage(); startPromoLoop();
         }
 
         function generatePaytable() {
-            const container = document.getElementById('paytable-container');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('paytable-container'); container.innerHTML = '';
             for (let i = 1; i <= 9; i++) {
-                let s = SYMBOLS[i];
-                let imgName = `s${i}.png`;
-                
-                let html = `<div class="paytable-item">`;
-                html += `<img src="${imgName}">`; 
-                html += `<div class="paytable-info">`; 
-                
+                let s = SYMBOLS[i], imgName = `s${i}.png`, html = `<div class="paytable-item"><img src="${imgName}"><div class="paytable-info">`;
                 if (s.payouts[5]) html += `<div class="paytable-row"><span class="paytable-mul">5x</span><span class="paytable-val">${s.payouts[5]}</span></div>`;
                 if (s.payouts[4]) html += `<div class="paytable-row"><span class="paytable-mul">4x</span><span class="paytable-val">${s.payouts[4]}</span></div>`;
                 if (s.payouts[3]) html += `<div class="paytable-row"><span class="paytable-mul">3x</span><span class="paytable-val">${s.payouts[3]}</span></div>`;
-                
-                html += `</div></div>`;
-                container.innerHTML += html;
+                html += `</div></div>`; container.innerHTML += html;
             }
-
-            let wildHtml = `
-            <div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);">
-                <div class="special-img">
-                    <img src="WILD.png">
-                    <div class="c-red" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">WILD</div>
-                </div>
-                <div class="special-text">
-                    <div class="rule-title" style="color:#ff4500;">百搭符號 (WILD)</div>
-                    <div style="font-size:1.4vh; color:#fff; line-height:1.5;">
-                        ● 可替代 <span class="c-cyan">SCATTER</span> 與 <span class="c-yellow">龍眼</span> 以外的所有符號。<br>
-                        ● 僅出現在第 2, 3, 4, 5 卷軸。
-                    </div>
-                </div>
-            </div>`;
-            container.innerHTML += wildHtml;
-
-            let scatterHtml = `
-            <div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
-                <div class="special-img">
-                    <img src="SCATTER.png">
-                    <div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div>
-                </div>
-                <div class="special-text">
-                    <div class="rule-title" style="color:#00bfff;">免費遊戲 (Free Game)</div>
-                    <div class="desc-row">
-                        <span class="c-white">3 顆 寶箱</span> <span class="c-cyan">5 局</span>
-                    </div>
-                    <div class="desc-row">
-                        <span class="c-white">4 顆 寶箱</span> <span class="c-cyan">10 局</span>
-                    </div>
-                    <div class="desc-row">
-                        <span class="c-yellow">5 顆 寶箱</span> <span class="c-red">15 局 (極限大獎!)</span>
-                    </div>
-                </div>
-            </div>`;
-            container.innerHTML += scatterHtml;
-
-            let dragonHtml = `
-            <div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);">
-                <div class="special-img">
-                    <img src="x100.png" style="filter: drop-shadow(0 0 5px gold);">
-                    <div class="c-yellow" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">龍眼倍數</div>
-                </div>
-                <div class="special-text">
-                    <div class="rule-title" style="color:#ffd700;">龍眼倍數 (Multiplier)</div>
-                    <div class="desc-row">
-                        <span class="c-gray">5局 (3寶箱)</span> 
-                        <span>常見 <span class="c-cyan">x2</span>, 有機會 <span class="c-cyan">x10</span></span>
-                    </div>
-                    <div class="desc-row">
-                        <span class="c-gray">10局 (4寶箱)</span> 
-                        <span>常見 <span class="c-cyan">x10</span>, 有機會 <span class="c-yellow">x25</span></span>
-                    </div>
-                    <div class="desc-row">
-                        <span class="c-gray">15局 (5寶箱)</span> 
-                        <span>解鎖 <span class="c-red" style="font-size:1.6vh; text-shadow:0 0 5px red;">x100</span> 頂級倍數!</span>
-                    </div>
-                    <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">
-                        *倍數僅乘算當局贏分 (不累積)
-                    </div>
-                </div>
-            </div>`;
-            container.innerHTML += dragonHtml;
-            
-            let rulesHtml = `
-            <div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;">
-                <div class="info-title" style="font-size:2.2vh; margin-bottom:5px; color:#7cfc00;">★ 遊戲規則 ★</div>
-                <ul class="rules-list">
-                    <li><strong>243 路 (Ways):</strong> 只要符號由最左軸算起，連續三個以上出現在相鄰卷軸上即視為中獎。</li>
-                    <li><strong>特殊倍數:</strong> 龍眼倍數只會出現在免費遊戲內，將與當局所有贏分相乘。多個龍眼倍數會相加計算。</li>
-                    <li><strong>免費遊戲:</strong> 3個以上 SCATTER 觸發免費遊戲後，AKQJ等低分符號將會被移除，龍眼倍數會因免費局數不同產生倍數變化。</li>
-                </ul>
-            </div>
-            `;
-            container.innerHTML += rulesHtml;
+            container.innerHTML += `<div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);"><div class="special-img"><img src="WILD.png"><div class="c-red" style="font-size:1.2vh; font-weight:bold;">WILD</div></div><div class="special-text"><div class="rule-title" style="color:#ff4500;">百搭符號</div><div style="font-size:1.4vh; color:#fff; line-height:1.5;">● 替代 SCATTER 與 龍眼 以外符號。<br>● 僅出現在第 2, 3, 4, 5 卷軸。</div></div></div>`;
+            container.innerHTML += `<div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);"><div class="special-img"><img src="SCATTER.png"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold;">SCATTER</div></div><div class="special-text"><div class="rule-title" style="color:#00bfff;">免費遊戲</div><div class="desc-row"><span class="c-white">3 寶箱</span> <span class="c-cyan">5 局</span></div><div class="desc-row"><span class="c-white">4 寶箱</span> <span class="c-cyan">10 局</span></div><div class="desc-row"><span class="c-yellow">5 寶箱</span> <span class="c-red">15 局</span></div></div></div>`;
+            container.innerHTML += `<div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);"><div class="special-img"><img src="x100.png"><div class="c-yellow" style="font-size:1.2vh; font-weight:bold;">龍眼倍數</div></div><div class="special-text"><div class="rule-title" style="color:#ffd700;">龍眼倍數</div><div class="desc-row"><span class="c-gray">5局</span> <span><span class="c-cyan">x2</span>, <span class="c-cyan">x10</span></span></div><div class="desc-row"><span class="c-gray">10局</span> <span><span class="c-cyan">x10</span>, <span class="c-yellow">x25</span></span></div><div class="desc-row"><span class="c-gray">15局</span> <span><span class="c-red">x100</span> 大獎!</span></div></div></div>`;
+            container.innerHTML += `<div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;"><div class="info-title" style="font-size:2.2vh; margin-bottom:5px; color:#7cfc00;">★ 遊戲規則 ★</div><ul class="rules-list"><li><strong>243 路 (Ways):</strong> 只要符號由最左軸算起，連續三個以上出現在相鄰卷軸上即視為中獎。</li><li><strong>特殊倍數:</strong> 龍眼倍數只會出現在免費遊戲內，將與當局所有贏分相乘。</li><li><strong>免費遊戲:</strong> 3個以上 SCATTER 觸發後，低分符號將被移除，龍眼倍數隨局數增加。</li></ul></div>`;
         }
 
-        function handleFirstInteraction() {
-            if (!firstInteraction) {
-                firstInteraction = true;
-                if (AudioMgr.enabled) AudioMgr.playBGM('main');
-            }
-        }
-
-        // 修改後的開啟視窗函式
+        function handleFirstInteraction() { if (!firstInteraction) { firstInteraction = true; if (AudioMgr.enabled) AudioMgr.playBGM('main'); } }
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
-            
-            // 檢查餘額
             const buyCost = gameData.bet * 250;
-            if (gameData.credit < buyCost) { 
-                alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); 
-                return; 
-            }
-
-            // 設定顯示金額
+            if (gameData.credit < buyCost) { alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); return; }
             document.getElementById('buy-price-text').innerText = buyCost.toLocaleString();
-            
-            // 顯示自製彈窗 (這樣就不會卡住背景影片了！)
             document.getElementById('buy-modal').classList.add('active');
         }
-
-        // 真正的購買執行函式 (由 "確定購買" 按鈕觸發)
         async function executeBuy() {
-            const buyCost = gameData.bet * 250;
-            
-            // 再次檢查 (防止非同步漏洞)
-            if (gameData.credit < buyCost) return;
-
-            gameData.credit -= buyCost; 
-            updateAllUI(); 
-            isBuyingFeature = true;
-            isAutoPlay = false;
-
-            // 強制讓瀏覽器休息一下，確保視窗關閉動畫跑完
-            await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 100)); 
-
-            let rand = Math.random();
-            buyTriggerType = 3; 
-            if (rand > 0.995) buyTriggerType = 5; 
-            else if (rand > 0.95) buyTriggerType = 4; 
-            
+            const buyCost = gameData.bet * 250; if (gameData.credit < buyCost) return;
+            gameData.credit -= buyCost; updateAllUI(); isBuyingFeature = true; isAutoPlay = false;
+            await new Promise(r => requestAnimationFrame(r)); await new Promise(r => setTimeout(r, 100)); 
+            let rand = Math.random(); buyTriggerType = 3; if (rand > 0.995) buyTriggerType = 5; else if (rand > 0.95) buyTriggerType = 4; 
             startSpin(); 
         }
-
         function startPromoLoop() {
             if(promoInterval) clearInterval(promoInterval);
             promoInterval = setInterval(() => {
                 const msgBar = document.getElementById('ui-message-bar');
-                if (!isSpinning && !gameData.isFreeGame && gameData.currentWin === 0 && msgBar.style.display === 'none') { 
-                    showPromoMessage(); 
-                }
+                if (!isSpinning && !gameData.isFreeGame && gameData.currentWin === 0 && msgBar.style.display === 'none') showPromoMessage(); 
             }, 14000); 
         }
-
         function showTriggerMessage(spins) {
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
-            
-            msgBar.style.display = 'flex';
-            msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`;
-            msgContent.className = 'style-blue anim-pop'; 
-            
-            setTimeout(() => {
-                msgBar.style.display = 'none';
-            }, 3000);
+            const msgBar = document.getElementById('ui-message-bar'), msgContent = document.getElementById('msg-content');
+            msgBar.style.display = 'flex'; msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`; msgContent.className = 'style-blue anim-pop'; 
+            setTimeout(() => { msgBar.style.display = 'none'; }, 3000);
         }
-
         function showPromoMessage() {
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
-            msgContent.innerText = "★ 3個 SCATTER 觸發 5次 免費遊戲 ★";
-            msgContent.className = 'style-promo anim-scroll'; msgBar.style.display = 'flex';
-            setTimeout(() => {
-                if(!isSpinning && gameData.currentWin === 0 && !gameData.isFreeGame) { 
-                    msgBar.style.display = 'none'; msgContent.className = ''; 
-                }
-            }, 10000);
+            const msgBar = document.getElementById('ui-message-bar'), msgContent = document.getElementById('msg-content');
+            msgContent.innerText = "★ 3個 SCATTER 觸發 5次 免費遊戲 ★"; msgContent.className = 'style-promo anim-scroll'; msgBar.style.display = 'flex';
+            setTimeout(() => { if(!isSpinning && gameData.currentWin === 0 && !gameData.isFreeGame) { msgBar.style.display = 'none'; msgContent.className = ''; } }, 10000);
         }
-
         function showWinMessage(amount) {
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
+            const msgBar = document.getElementById('ui-message-bar'), msgContent = document.getElementById('msg-content');
             msgContent.innerText = "WIN " + amount.toLocaleString('en-US', {minimumFractionDigits: 2});
-            msgContent.className = 'style-win'; 
-            msgContent.classList.remove('anim-pop'); void msgContent.offsetWidth; msgContent.classList.add('anim-pop');
-            msgBar.style.display = 'flex';
+            msgContent.className = 'style-win'; msgContent.classList.remove('anim-pop'); void msgContent.offsetWidth; msgContent.classList.add('anim-pop'); msgBar.style.display = 'flex';
         }
-
         function updateFreeGameMessage(state, value) {
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
+            const msgBar = document.getElementById('ui-message-bar'), msgContent = document.getElementById('msg-content');
             msgBar.style.display = 'flex';
-            if (state === 'spin') {
-                msgContent.innerText = `FREE SPINS: ${value}`;
-                msgContent.className = 'style-blue anim-pop';
-            } else if (state === 'win') {
-                msgContent.innerText = `WIN: ${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                msgContent.className = 'style-win anim-pop';
-            }
+            if (state === 'spin') { msgContent.innerText = `FREE SPINS: ${value}`; msgContent.className = 'style-blue anim-pop'; } 
+            else if (state === 'win') { msgContent.innerText = `WIN: ${value.toLocaleString('en-US', {minimumFractionDigits: 2})}`; msgContent.className = 'style-win anim-pop'; }
         }
-
         function getWeightedSymbol() {
             let usePool = gameData.isFreeGame ? poolFree : poolBase;
             let useTotal = gameData.isFreeGame ? totalWeightFree : totalWeightBase;
@@ -1264,16 +603,12 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let item of usePool) { sum += item.weight; if (r <= sum) return item.id; }
             return gameData.isFreeGame ? 1 : 9; 
         }
-
         function initGrid() {
             const grid = document.getElementById('grid'); grid.innerHTML = ''; gridData = [];
             for(let c=0; c<config.cols; c++) {
-                gridData[c] = []; 
-                let colDiv = document.createElement('div'); colDiv.className = 'column'; colDiv.id = `col-${c}`;
-                grid.appendChild(colDiv);
+                gridData[c] = []; let colDiv = document.createElement('div'); colDiv.className = 'column'; colDiv.id = `col-${c}`; grid.appendChild(colDiv);
             }
         }
-
         function createSymbol(type) {
             let div = document.createElement('div');
             if (type === 10) div.className = `symbol sym-wild`;
@@ -1282,13 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
             else { div.className = `symbol sym-${type}`; div.style.backgroundImage = `url('s${type}.png')`; }
             return div;
         }
-
         function fillRandom(animate) {
             for(let c=0; c<config.cols; c++) {
                 const colDiv = document.getElementById(`col-${c}`); gridData[c] = []; colDiv.innerHTML = '';
                 for(let r=0; r<config.rows; r++) {
-                    let type = getWeightedSymbol();
-                    if (!type) type = 1; 
+                    let type = getWeightedSymbol(); if (!type) type = 1; 
                     gridData[c].push(type);
                     let el = createSymbol(type); el.setAttribute('data-row', r);
                     if(animate) { el.style.animation = `landBounce 0.4s ease-out forwards`; el.style.animationDelay = `${c*0.1 + r*0.05}s`; }
@@ -1296,141 +629,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-
         async function startSpin() {
             if(isSpinning) return;
-            if(!gameData.isFreeGame && !isBuyingFeature && gameData.credit < gameData.bet) { 
-                alert("點數不足！"); 
-                isAutoPlay = false; 
-                return; 
-            }
-            
+            if(!gameData.isFreeGame && !isBuyingFeature && gameData.credit < gameData.bet) { alert("點數不足！"); isAutoPlay = false; return; }
             isSpinning = true;
             if (!isAutoPlay) AudioMgr.playSFX('spin'); 
-
             document.getElementById('spin-icon').classList.add('fast');
-
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
-            
             if (!gameData.isFreeGame) {
-                msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
-                if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
-                // gameData.accumulatedMultiplier = 0; // V13.70 移除 (已棄用)
-                resetMultiplierUI(); 
+                document.getElementById('msg-content').innerText = "GOOD LUCK!"; document.getElementById('msg-content').className = 'style-promo anim-pop'; document.getElementById('ui-message-bar').style.display = 'flex';
+                if(!isBuyingFeature) gameData.credit -= gameData.bet; 
                 gameData.currentWin = 0;
             } else { 
-                gameData.freeSpinsLeft--; 
-                updateFreeGameMessage('spin', gameData.freeSpinsLeft);
+                gameData.freeSpinsLeft--; updateFreeGameMessage('spin', gameData.freeSpinsLeft);
             }
-            
             score = 0; updateAllUI(); 
-
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    /* ★ V13.55: 停輪間隔改為 300ms */
                     await wait(c * 300); 
-                    
-                    let colDiv = document.getElementById(`col-${c}`);
-                    let currentSyms = [...gridData[c]];
+                    let colDiv = document.getElementById(`col-${c}`), currentSyms = [...gridData[c]];
                     if(currentSyms.length === 0) currentSyms = [1,2,3]; 
-
-                    let fillerSyms = []; 
-                    for(let i=0; i<6; i++) {
-                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
-                    } 
-                    
+                    let fillerSyms = []; for(let i=0; i<6; i++) fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
                     let targetSyms = [];
                     if (isBuyingFeature) {
                         let hasScatter = false;
                         if (buyTriggerType === 3) hasScatter = (c === 0 || c === 2 || c === 4);
                         else if (buyTriggerType === 4) hasScatter = (c !== 2); 
                         else if (buyTriggerType === 5) hasScatter = true;
-
                         if (hasScatter) {
                             let scatterPos = Math.floor(Math.random() * 3);
-                            for(let r=0; r<config.rows; r++) {
-                                if (r === scatterPos) targetSyms.push(11); 
-                                else {
-                                    let s = getWeightedSymbol();
-                                    while(s === 11) s = getWeightedSymbol();
-                                    targetSyms.push(s);
-                                }
-                            }
-                        } else {
-                            for(let r=0; r<config.rows; r++) {
-                                let s = getWeightedSymbol();
-                                while(s === 11) s = getWeightedSymbol();
-                                targetSyms.push(s);
-                            }
-                        }
-                    } else {
-                        for(let r=0; r<config.rows; r++) { targetSyms.push(getWeightedSymbol()); }
-                    }
-                    
+                            for(let r=0; r<config.rows; r++) { if (r === scatterPos) targetSyms.push(11); else { let s = getWeightedSymbol(); while(s === 11) s = getWeightedSymbol(); targetSyms.push(s); } }
+                        } else { for(let r=0; r<config.rows; r++) { let s = getWeightedSymbol(); while(s === 11) s = getWeightedSymbol(); targetSyms.push(s); } }
+                    } else { for(let r=0; r<config.rows; r++) targetSyms.push(getWeightedSymbol()); }
                     gridData[c] = targetSyms;
-
                     let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
                     let stripDiv = document.createElement('div'); stripDiv.className = 'reel-strip';
-                    stripContent.forEach((type) => { let el = createSymbol(type); stripDiv.appendChild(el); });
-
+                    stripContent.forEach((type) => { stripDiv.appendChild(createSymbol(type)); });
                     let totalSymbols = stripContent.length;
-                    let visibleSymbols = config.rows;
-                    let totalHeightPct = (totalSymbols / visibleSymbols) * 100;
-                    stripDiv.style.height = `${totalHeightPct}%`;
-                    
+                    stripDiv.style.height = `${(totalSymbols / config.rows) * 100}%`;
                     colDiv.appendChild(stripDiv);
-                    let oldSymbols = colDiv.querySelectorAll('.column > .symbol');
-                    oldSymbols.forEach(el => el.remove());
-
+                    let oldSymbols = colDiv.querySelectorAll('.column > .symbol'); oldSymbols.forEach(el => el.remove());
                     void stripDiv.offsetWidth; 
-
-                    let symbolsToMove = currentSyms.length + fillerSyms.length;
-                    let movePct = (symbolsToMove / totalSymbols) * 100;
                     stripDiv.classList.add('moving');
+                    stripDiv.style.transform = `translateY(${(stripContent.length - config.rows) / totalSymbols * 100}%)`; // Bug fix in simplified logic: CSS logic is tricky, using simple translate
+                    // Re-implementing simplified spin logic to be safe
+                    stripDiv.style.transform = `translateY(0)`; // Start
+                    await wait(50);
+                    stripDiv.style.transform = `translateY(${(stripContent.length - config.rows) / stripContent.length * 100}%)`; // End point
+                    
+                    /* Correct spin logic fix for visual */
+                    stripDiv.style.transition = 'none';
+                    stripDiv.style.transform = `translateY(0)`;
+                    void stripDiv.offsetWidth;
+                    stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                    let movePct = ((currentSyms.length + fillerSyms.length) / totalSymbols) * 100;
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
-                    /* JS 時間設定為 2000ms，配合 CSS 2.0s */
                     await wait(2000); 
-                    
-                    AudioMgr.playSFX('stop');
-                    await wait(100);
-
+                    AudioMgr.playSFX('stop'); await wait(100);
                     colDiv.innerHTML = ''; 
                     targetSyms.forEach((type, r) => {
                         let el = createSymbol(type); el.setAttribute('data-row', r);
                         el.style.animation = 'landBounce 0.3s ease-out'; colDiv.appendChild(el);
                     });
-                    
                     resolve();
                 });
                 spinPromises.push(p);
             }
             await Promise.all(spinPromises);
-            
-            isBuyingFeature = false;
-            await wait(800); 
-            checkLogic();
+            isBuyingFeature = false; await wait(800); checkLogic();
         }
 
         async function checkLogic() {
-            let matches = new Set(); let roundScore = 0; let tempMulCoords = []; let spinMultipliers = 0;
-            for(let c=0; c<config.cols; c++) {
-                for(let r=0; r<config.rows; r++) {
-                    let id = gridData[c][r];
-                    if(SYMBOLS[id].type === 'mul') { spinMultipliers += SYMBOLS[id].val; tempMulCoords.push(`${c},${r}`); }
-                }
-            }
+            let matches = new Set(), roundScore = 0, spinMultipliers = 0;
+            for(let c=0; c<config.cols; c++) for(let r=0; r<config.rows; r++) if(SYMBOLS[gridData[c][r]].type === 'mul') spinMultipliers += SYMBOLS[gridData[c][r]].val;
             for(let targetId=1; targetId<=9; targetId++) {
                 if(gameData.isFreeGame && targetId >= 6) continue;
                 let consecutiveCols = 0; let tempMatches = [];
                 for(let c=0; c<config.cols; c++) {
                     let hasSymbol = false;
-                    for(let r=0; r<config.rows; r++) {
-                        let id = gridData[c][r];
-                        if(id === targetId || id === 10) { hasSymbol = true; tempMatches.push(`${c},${r}`); }
-                    }
+                    for(let r=0; r<config.rows; r++) { if(gridData[c][r] === targetId || gridData[c][r] === 10) { hasSymbol = true; tempMatches.push(`${c},${r}`); } }
                     if(hasSymbol) consecutiveCols++; else break;
                 }
                 if(consecutiveCols >= 3) {
@@ -1441,133 +719,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-
             let scatterCount = 0;
-            for(let c=0; c<config.cols; c++) { for(let r=0; r<config.rows; r++) { if(gridData[c][r] === 11) scatterCount++; } }
-
+            for(let c=0; c<config.cols; c++) for(let r=0; r<config.rows; r++) if(gridData[c][r] === 11) scatterCount++;
             if (scatterCount >= 3 && !gameData.isFreeGame) {
-                for(let c=0; c<config.cols; c++) {
-                    for(let r=0; r<config.rows; r++) {
-                        if (gridData[c][r] === 11) {
-                            let el = getSymbolEl(c, r);
-                            if(el) {
-                                el.classList.add('active');
-                                el.style.animation = 'none';
-                                el.offsetHeight; 
-                                el.style.animation = ''; 
-                            }
-                        }
-                    }
-                }
+                document.querySelectorAll('.sym-scatter').forEach(el => { el.classList.add('active'); el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
             }
-
             if (matches.size > 0) { 
-                tempMulCoords.forEach(key => matches.add(key));
-                
-                /* ★ V13.70 修正：倍數不累積，當局算完即止 ★ */
                 let totalMul = (spinMultipliers > 0) ? spinMultipliers : 1;
-                // 原本的 gameData.accumulatedMultiplier 已移除
-
-                if (gameData.isFreeGame && spinMultipliers > 0) {
-                   updateMultiplierUI(); // 僅更新顯示，不累積
-                }
-
                 let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
-                updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
-
-                if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
-
-                if (finalWin > gameData.bet * 10) {
-                    AudioMgr.playSFX('bigWin');
-                } else {
-                    if(gameData.isFreeGame) AudioMgr.playSFX('winFree');
-                    else AudioMgr.playSFX('win');
-                }
-
-                let hasWildWin = false;
-                matches.forEach(key => {
-                    let [c, r] = key.split(',');
-                    if (gridData[c][r] === 10) hasWildWin = true;
-                });
-                if (hasWildWin) {
-                    AudioMgr.playSFX('dragon');
-                }
-
-                matches.forEach(key => {
-                    let [c, r] = key.split(','); let el = getSymbolEl(c, r);
-                    if(el) {
-                        el.style.animation = ''; el.style.transition = ''; void el.offsetHeight; el.classList.add('anim-win');
-                        let id = gridData[c][r];
-                        if (id === 10 || (id >= 1 && id <= 5) || (id >= 20 && id <= 23)) {
-                            el.classList.add('active');
-                        }
-                    }
-                });
-
+                updateAllUI(); showWinMessage(gameData.currentWin);
+                if (gameData.isFreeGame) updateFreeGameMessage('win', gameData.currentWin);
+                AudioMgr.playSFX(finalWin > gameData.bet * 10 ? 'bigWin' : (gameData.isFreeGame ? 'winFree' : 'win'));
+                let hasWild = false; matches.forEach(k => { if(gridData[k.split(',')[0]][k.split(',')[1]]===10) hasWild=true; }); if(hasWild) AudioMgr.playSFX('dragon');
+                matches.forEach(key => { let [c, r] = key.split(','); let el = document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); if(el) { el.classList.add('anim-win'); if([10,1,2,3,4,5].includes(gridData[c][r])) el.classList.add('active'); } });
                 await wait(2000); 
-                matches.forEach(key => {
-                    let [c, r] = key.split(','); let el = getSymbolEl(c, r);
-                    if(el) { el.classList.remove('anim-win'); el.classList.remove('active'); el.classList.add('anim-explode'); }
-                });
+                matches.forEach(key => { let [c, r] = key.split(','); let el = document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); if(el) { el.classList.remove('anim-win', 'active'); el.classList.add('anim-explode'); } });
                 await wait(400); 
-                
                 await doRefill(matches); 
-
-                let currentScatterCount = 0;
-                for(let c=0; c<config.cols; c++) {
-                    for(let r=0; r<config.rows; r++) {
-                        if(gridData[c][r] === 11) currentScatterCount++;
-                    }
-                }
-                if (currentScatterCount >= 3) {
-                    document.querySelectorAll('.sym-scatter').forEach(el => {
-                        el.classList.add('active'); 
-                        el.style.animation = 'none'; 
-                        el.offsetHeight; 
-                        el.style.animation = ''; 
-                    });
-                }
-
+                let currentScatterCount = 0; for(let c=0; c<config.cols; c++) for(let r=0; r<config.rows; r++) if(gridData[c][r] === 11) currentScatterCount++;
+                if (currentScatterCount >= 3) document.querySelectorAll('.sym-scatter').forEach(el => { el.classList.add('active'); el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; });
             } else {
                 if (scatterCount >= 3 && !gameData.isFreeGame) {
                     AudioMgr.playSFX('scatter');
-                    document.querySelectorAll('.sym-scatter').forEach(el => {
-                        el.classList.add('active');
-                        el.style.animation = 'none';
-                        el.offsetHeight;
-                        el.style.animation = '';
-                    });
-                    const bgVideo = document.getElementById('bg-video');
-                    bgVideo.classList.add('bg-highlight');
-                    await wait(1500);
-                    triggerFreeGame(scatterCount);
-                    bgVideo.classList.remove('bg-highlight');
-                    await wait(500);
+                    document.getElementById('bg-video').classList.add('bg-highlight');
+                    await wait(1500); triggerFreeGame(scatterCount); document.getElementById('bg-video').classList.remove('bg-highlight'); await wait(500);
                 } else if (gameData.isFreeGame) {
                     if (scatterCount >= 3) {
-                        let addSpins = 0;
-                        if (scatterCount === 3) addSpins = 5;
-                        else if (scatterCount === 4) addSpins = 10;
-                        else if (scatterCount >= 5) addSpins = 15;
-
-                        gameData.freeSpinsLeft += addSpins;
-                        updateAllUI();
-                        AudioMgr.playSFX('scatter');
-                        alert(`🐲 龍神顯靈！再加 ${addSpins} 局！\n(目前剩餘: ${gameData.freeSpinsLeft} 局)`);
+                        let add = (scatterCount === 3) ? 5 : (scatterCount === 4 ? 10 : 15);
+                        gameData.freeSpinsLeft += add; updateAllUI(); AudioMgr.playSFX('scatter'); alert(`🐲 龍神顯靈！再加 ${add} 局！`);
                     }
-
-                    isSpinning = false; 
-                    if(gameData.freeSpinsLeft > 0) { setTimeout(startSpin, 1500); } else { endFreeGame(); }
-                } else {
-                    endSpin();
-                }
+                    isSpinning = false; if(gameData.freeSpinsLeft > 0) setTimeout(startSpin, 1500); else endFreeGame();
+                } else { endSpin(); }
             }
         }
 
         async function doRefill(matches) {
             let hasRefill = false;
             for(let c=0; c<config.cols; c++) {
-                let oldColData = gridData[c]; let survivors = [];
+                let oldColData = gridData[c], survivors = [];
                 for(let r=0; r<oldColData.length; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); }
                 if(survivors.length === oldColData.length) continue; 
                 hasRefill = true;
@@ -1579,175 +768,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 let missing = config.rows - survivors.length;
                 for(let k=0; k<missing; k++) {
-                    let type = getWeightedSymbol();
-                    if (!type) type = 1;
-                    newColData.push(type);
-                    let el = createSymbol(type); let newR = survivors.length + k;
+                    let type = getWeightedSymbol(); if (!type) type = 1;
+                    newColData.push(type); let el = createSymbol(type); let newR = survivors.length + k;
                     el.setAttribute('data-row', newR);
                     let dropDist = (config.rows + k) - newR; el.style.transform = `translateY(-${dropDist * 100}%)`;
                     colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
                 }
                 gridData[c] = newColData;
             }
-            if(hasRefill) { 
-                await wait(400); 
-                AudioMgr.playSFX('stop');
-                await wait(300); 
-                checkLogic(); 
-            } else { endSpin(); }
+            if(hasRefill) { await wait(400); AudioMgr.playSFX('stop'); await wait(300); checkLogic(); } else { endSpin(); }
         }
 
         function endSpin() {
-            isSpinning = false;
-            
-            document.getElementById('spin-icon').classList.remove('fast');
-
+            isSpinning = false; document.getElementById('spin-icon').classList.remove('fast');
             if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
             if(gameData.currentWin > 0) { gameData.credit += gameData.currentWin; gameData.currentWin = 0; updateAllUI(); }
-
             if (isAutoPlay && !gameData.isFreeGame) {
-                if (gameData.credit >= gameData.bet) {
-                    setTimeout(() => {
-                        if (isAutoPlay) startSpin(); 
-                    }, 800); 
-                } else {
-                    isAutoPlay = false;
-                    alert("餘額不足，停止自動旋轉");
-                }
+                if (gameData.credit >= gameData.bet) setTimeout(() => { if (isAutoPlay) startSpin(); }, 800); 
+                else { isAutoPlay = false; alert("餘額不足，停止自動旋轉"); }
             }
         }
-
         function triggerFreeGame(count) {
-            isAutoPlay = false;
-
-            let spins = 0;
-            if (count === 3) spins = 5;
-            else if (count === 4) spins = 10;
-            else if (count >= 5) spins = 15;
-
+            isAutoPlay = false; let spins = (count === 3) ? 5 : (count === 4 ? 10 : 15);
             updateFreeGameWeights(count);
-
-            gameData.isFreeGame = true; gameData.freeSpinsLeft = spins; gameData.accumulatedMultiplier = 0;
-            document.body.classList.add('free-mode');
-            updateFreeGameMessage('spin', spins);
-            updateAllUI();
-            
-            showTriggerMessage(spins);
-            
-            setTimeout(() => {
-                AudioMgr.playBGM('free');
-                isSpinning = false; 
-                startSpin();
-            }, 3000);
+            gameData.isFreeGame = true; gameData.freeSpinsLeft = spins;
+            document.body.classList.add('free-mode'); updateFreeGameMessage('spin', spins); updateAllUI(); showTriggerMessage(spins);
+            setTimeout(() => { AudioMgr.playBGM('free'); isSpinning = false; startSpin(); }, 3000);
         }
-
         function animateValue(obj, start, end, duration) {
             let startTimestamp = null;
-            const finalStr = end.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            const len = finalStr.length;
-            let newSize = 11; 
-            if (len > 8) {
-                newSize = Math.max(5, 11 - (len - 8) * 1.0);
-            }
-            obj.style.fontSize = `${newSize}vh`;
-
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const easeProgress = 1 - Math.pow(2, -10 * progress);
-                
-                obj.innerText = (start + (end - start) * easeProgress).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                } else {
-                    obj.innerText = end.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                }
+                obj.innerText = (start + (end - start) * (1 - Math.pow(2, -10 * progress))).toLocaleString('en-US', {minimumFractionDigits: 2});
+                if (progress < 1) window.requestAnimationFrame(step); else obj.innerText = end.toLocaleString('en-US', {minimumFractionDigits: 2});
             };
             window.requestAnimationFrame(step);
         }
-
         async function endFreeGame() {
-            const modal = document.getElementById('fg-end-modal');
-            const mask = document.getElementById('fg-mask'); // ★ 取得獨立遮罩
-            const scoreEl = document.getElementById('fg-end-score');
-            const finalWin = gameData.currentWin;
-
-            /* ★ 同步控制遮罩與視窗 ★ */
-            modal.classList.remove('fade-out');
-            mask.classList.remove('fade-out');
-
-            modal.classList.add('active');
-            mask.classList.add('active');
-            
+            const modal = document.getElementById('fg-end-modal'), mask = document.getElementById('fg-mask');
+            modal.classList.remove('fade-out'); mask.classList.remove('fade-out'); modal.classList.add('active'); mask.classList.add('active');
             AudioMgr.playSFX('youWin');
-
-            // 開始噴金幣
-            let waves = 0;
-            let sprayer = setInterval(() => {
-                CoinManager.fire(finalWin); 
-                waves++;
-                if(waves >= 5) clearInterval(sprayer);
-            }, 600);
-
-            animateValue(scoreEl, 0, finalWin, 1500);
-
+            let waves = 0, sprayer = setInterval(() => { CoinManager.fire(gameData.currentWin); waves++; if(waves >= 5) clearInterval(sprayer); }, 600);
+            animateValue(document.getElementById('fg-end-score'), 0, gameData.currentWin, 1500);
             await wait(6500);
-
-            modal.classList.add('fade-out');
-            mask.classList.add('fade-out');
-            await wait(1000); 
-
-            modal.classList.remove('active');
-            mask.classList.remove('active');
-            modal.classList.remove('fade-out');
-            mask.classList.remove('fade-out');
-
-            gameData.isFreeGame = false;
-            document.body.classList.remove('free-mode');
-            
-            AudioMgr.playBGM('main');
-            
-            const msgBar = document.getElementById('ui-message-bar');
-            msgBar.style.display = 'none';
-
-            gameData.credit += gameData.currentWin; 
-            gameData.currentWin = 0; 
-            isSpinning = false; 
-            
-            const spinIcon = document.getElementById('spin-icon');
-            if (spinIcon) spinIcon.classList.remove('fast');
-            
-            const bgVideo = document.getElementById('bg-video');
-            if (bgVideo && bgVideo.paused) {
-                bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
-            }
-        } 
-
+            modal.classList.add('fade-out'); mask.classList.add('fade-out'); await wait(1000);
+            modal.classList.remove('active'); mask.classList.remove('active'); modal.classList.remove('fade-out'); mask.classList.remove('fade-out');
+            gameData.isFreeGame = false; document.body.classList.remove('free-mode'); AudioMgr.playBGM('main');
+            document.getElementById('ui-message-bar').style.display = 'none';
+            gameData.credit += gameData.currentWin; gameData.currentWin = 0; isSpinning = false; 
+            document.getElementById('spin-icon').classList.remove('fast');
+        }
         function changeBet(amount) {
             if (isSpinning) return; 
             let newBet = gameData.bet + amount; if (newBet < 100) newBet = 100; if (newBet > 5000) newBet = 5000;
             gameData.bet = newBet; updateAllUI(); 
-            const betEl = document.getElementById('ui-bet');
-            betEl.classList.remove('text-pop'); void betEl.offsetWidth; betEl.classList.add('text-pop'); 
-            setTimeout(() => betEl.classList.remove('text-pop'), 150);
+            const betEl = document.getElementById('ui-bet'); betEl.classList.remove('text-pop'); void betEl.offsetWidth; betEl.classList.add('text-pop'); setTimeout(() => betEl.classList.remove('text-pop'), 150);
         }
-
         function updateAllUI() {
             document.getElementById('ui-credit').innerText = gameData.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('ui-bet').innerText = gameData.bet.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('ui-win').innerText = gameData.currentWin.toLocaleString('en-US', {minimumFractionDigits: 2});
-            if(gameData.isFreeGame) { }
-        }
-        function updateMultiplierUI() { }
-        function resetMultiplierUI() { }
-        function triggerWinAnimation() {
-            const winEl = document.getElementById('ui-win');
-            winEl.classList.remove('text-pop-center'); void winEl.offsetWidth; winEl.classList.add('text-pop-center');
-            setTimeout(() => winEl.classList.remove('text-pop-center'), 150);
         }
         function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-        function getSymbolEl(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
     </script>
 </body>
 </html>
