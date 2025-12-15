@@ -3,20 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.84 完美特效整合版)</title>
+    <title>火龍祕寶 (V13.87 最終發行版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
             margin: 0; padding: 0;
             height: 100%; width: 100%;
-            overflow: hidden; /* ★ 強制隱藏溢出，防止捲動條出現 */
+            overflow: hidden; /* 強制隱藏捲動條 */
             background-color: #000;
-            
-            /* ★ V13.81: 禁止瀏覽器預設手勢 */
-            touch-action: none; 
-            
-            /* ★ V13.82: 防止 iOS 橡皮筋效果 */
-            position: fixed; 
+            touch-action: none; /* 禁止預設手勢 */
+            position: fixed; /* iOS 防橡皮筋 */
         }
 
         body {
@@ -106,13 +102,13 @@
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
-        /* ★ V13.84: 移植 7.1 版的火光特效 (包含 mix-blend-mode: overlay) ★ */
+        /* 火光特效 (混合模式 Overlay) */
         .fire-effect {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5; opacity: 0;
             transition: opacity 1s ease-in-out;
             box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); 
-            mix-blend-mode: overlay; /* 關鍵：讓顏色與背景影片融合 */
+            mix-blend-mode: overlay; 
         }
         .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
         @keyframes firePulse {
@@ -190,23 +186,83 @@
         @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; background-position: 0% 0%; transition: none !important; will-change: background-position; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
         .sym-scatter.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('SCATTER_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
+        
         .ghost-layer { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0.001; z-index: -999; pointer-events: none; }
         .ghost-layer .sym-scatter.active { animation-play-state: running !important; }
-        @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
-        .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
-        .sym-1.active { background-image: url('s1_sprite.png') !important; } .sym-2.active { background-image: url('s2_sprite.png') !important; } .sym-3.active { background-image: url('s3_sprite.png') !important; } .sym-4.active { background-image: url('s4_sprite.png') !important; } .sym-5.active { background-image: url('s5_sprite.png') !important; }
-        .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 600 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
-        .sym-mul.active::after { content: ""; position: absolute; width: 110%; left: -5%; height: 40%; bottom: 2%; background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 605; animation: wildPop 0.8s ease-in-out infinite alternate; }
-        .sym-20.active::after { background-image: url('x2_word.png'); } .sym-21.active::after { background-image: url('x10_word.png'); } .sym-22.active::after { background-image: url('x25_word.png'); } .sym-23.active::after { background-image: url('x100_word.png'); }
-        .sym-wild { background-image: url('WILD.png'); width: 115%; height: 100%; background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; margin-left: -7.5%; left: 0; z-index: 200 !important; transform-origin: center bottom; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
-        .sym-wild.active { background-image: url('dragon_sprite.png'); background-size: 2800% 100%; background-position: 0 0; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; }
-        .sym-wild.active::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; background-image: url('WILD_word.png'); background-size: contain; background-position: center bottom; background-repeat: no-repeat; z-index: 205; animation: wildPop 0.8s ease-in-out infinite alternate; }
+
+        /* WILD CSS */
+        .sym-wild { 
+            background-image: url('WILD.png'); 
+            width: 115%; height: 100%; 
+            background-size: 100% 100%; 
+            background-position: center bottom; 
+            background-repeat: no-repeat; 
+            margin-left: -7.5%; left: 0; 
+            z-index: 200; 
+            transform-origin: center bottom; 
+            filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); 
+        }
+        .sym-wild.active { 
+            background-image: url('dragon_sprite.png') !important; 
+            background-size: 2800% 100% !important; 
+            background-position: 0 0; 
+            z-index: 999 !important; 
+            animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; 
+        }
+        .sym-wild.active::after { 
+            content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 35%; 
+            background-image: url('WILD_word.png'); background-size: contain; 
+            background-position: center bottom; background-repeat: no-repeat; 
+            z-index: 1000; 
+            animation: wildPop 0.8s ease-in-out infinite alternate; 
+        }
         @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
-        .sym-mul { z-index: 150; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; }
-        .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
+
+        /* 一般符號動畫 */
+        @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
+        .sym-1.active { background-image: url('s1_sprite.png') !important; } 
+        .sym-2.active { background-image: url('s2_sprite.png') !important; } 
+        .sym-3.active { background-image: url('s3_sprite.png') !important; } 
+        .sym-4.active { background-image: url('s4_sprite.png') !important; } 
+        .sym-5.active { background-image: url('s5_sprite.png') !important; }
+
+        /* 龍眼倍數符號 */
+        .sym-mul { 
+            z-index: 180; 
+            width: 125%; margin-left: -12.5%; 
+            filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); 
+            background-size: 100% 100%; 
+            background-position: center bottom; 
+            background-repeat: no-repeat;
+        }
+        .sym-20 { background-image: url('x2.png'); } 
+        .sym-21 { background-image: url('x10.png'); } 
+        .sym-22 { background-image: url('x25.png'); } 
+        .sym-23 { background-image: url('x100.png'); }
+        
+        .sym-mul.active { 
+            background-image: url('eye_sprite.png') !important; 
+            background-size: 2800% 100% !important; 
+            background-position: 0% 0%; 
+            z-index: 999 !important; 
+            animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; 
+        }
+        .sym-mul.active::after { 
+            content: ""; position: absolute; width: 110%; left: -5%; height: 40%; bottom: 2%; 
+            background-size: contain; background-position: center bottom; background-repeat: no-repeat; 
+            z-index: 1000; animation: wildPop 0.8s ease-in-out infinite alternate; 
+        }
+        .sym-20.active::after { background-image: url('x2_word.png'); } 
+        .sym-21.active::after { background-image: url('x10_word.png'); } 
+        .sym-22.active::after { background-image: url('x25_word.png'); } 
+        .sym-23.active::after { background-image: url('x100_word.png'); }
+
         @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
-        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; } .sym-wild.anim-win, .sym-wild.active, .sym-scatter.anim-win { z-index: 600 !important; }
+        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; } 
+        .sym-wild.anim-win, .sym-wild.active, .sym-scatter.anim-win, .sym-mul.active { z-index: 999 !important; }
+        
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
         .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
 
@@ -266,7 +322,7 @@
             z-index: 1000; cursor: pointer; 
         }
 
-        /* V13.54 微幅回彈 */
+        /* 符號落地回彈 */
         @keyframes landBounce { 
             0% { transform: translateY(-7.5%); opacity: 1; } 
             50% { transform: translateY(6%); } 
@@ -314,8 +370,8 @@
             padding: 20px; overflow-y: auto; text-align: center; color: #fff; 
             box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); 
             padding-right: 15px;
-
-            /* ★ V13.81: 允許此區塊垂直捲動 ★ */
+            
+            /* 允許此區塊垂直捲動 */
             touch-action: pan-y;
             -webkit-overflow-scrolling: touch; 
         }
@@ -353,12 +409,6 @@
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #ffd700; }
         input:checked + .slider:before { transform: translateX(26px); }
-
-        /* 規則文字區 */
-        .rules-container { margin-top: 15px; text-align: left; padding: 10px 5px; border-top: 1px solid rgba(255,255,255,0.3); }
-        .rules-list { list-style-type: none; padding: 0; margin: 0; font-size: 1.5vh; color: #f0f0f0; line-height: 1.6; }
-        .rules-list li { margin-bottom: 8px; padding-left: 10px; border-left: 3px solid #ffd700; }
-        .rules-list strong { color: #fff; font-weight: 900; margin-right: 5px; }
 
         /* 購買確認視窗樣式 */
         #buy-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2800; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
@@ -463,7 +513,7 @@
             <div class="buy-box">
                 <div class="info-title" style="color: #ffd700;">購買特色遊戲</div>
                 <div style="color: #fff; margin: 20px 0; font-size: 2vh; line-height: 1.5;">
-                    確定要花費 <span id="buy-price-text" style="color: #00ffff;">25,000</span> 購買嗎？<br>
+                    確定要花費 <span id="buy-price-text" style="color: #00ffff;">10,000</span> 購買嗎？<br>
                     <span style="font-size: 1.5vh; color: #aaa;">(必定觸發免費遊戲)</span>
                 </div>
                 <div class="buy-actions">
@@ -511,7 +561,6 @@
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
-            // ★ 解鎖音效的函式
             init: function() {
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
                 const bgmMain = document.getElementById('bgm_main');
@@ -589,7 +638,6 @@
     </script>
 
     <script>
-        /* ★ V13.83 整合：移植自 8.0 版的金幣邏輯 (尺寸放大3倍/閃光/3D翻轉/星星粒子) ★ */
         const CoinManager = {
             canvas: null,
             ctx: null,
@@ -616,7 +664,6 @@
             },
 
             fire: function(amount) {
-                /* 減少粒子數量 (優化) */
                 let count = 10; 
                 let sparkleCount = 5;
 
@@ -648,17 +695,14 @@
                         vx: (Math.random() - 0.5) * (w * 0.03), 
                         vy: -(Math.random() * h * 0.025 + h * 0.015), 
                         gravity: h * 0.0005,
-                        /* V13.66 修改：金幣尺寸放大 3 倍 (*3) */
                         size: (Math.random() * 30 + 30) * (w / 720) * 3, 
                         rotation: Math.random() * 360,
                         rSpeed: (Math.random() - 0.5) * 10,
-                        /* V13.67 翻轉參數 */
                         flip: Math.random() * Math.PI, 
                         flipSpeed: Math.random() * 0.2 + 0.1,
-                        /* V13.68 閃光參數 */
                         isFlashing: false,
                         flashTimer: 0,
-                        flashDuration: 30 // 約 0.5 秒 (60fps)
+                        flashDuration: 30 
                     };
                 } else {
                     return {
@@ -691,8 +735,7 @@
                         p.rotation += p.rSpeed;
                         p.flip += p.flipSpeed;
 
-                        /* ★ V13.69 修正：提高閃光觸發機率至 5% ★ */
-                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
+                        if (!p.isFlashing && Math.random() < 0.05) { 
                             p.isFlashing = true;
                             p.flashTimer = 0;
                         }
@@ -700,12 +743,11 @@
                         let brightness = 100; 
                         if (p.isFlashing) {
                             p.flashTimer++;
-                            // 正弦波計算亮度：100% -> 200% -> 100%
                             let progress = p.flashTimer / p.flashDuration;
                             brightness = 100 + 100 * Math.sin(progress * Math.PI);
                             
                             if (p.flashTimer >= p.flashDuration) {
-                                p.isFlashing = false; // 閃爍結束
+                                p.isFlashing = false; 
                             }
                         }
                         
@@ -713,11 +755,9 @@
                         this.ctx.translate(p.x, p.y);
                         this.ctx.rotate(p.rotation * Math.PI / 180);
                         
-                        /* 假 3D 翻轉 */
                         let scaleX = Math.cos(p.flip); 
                         this.ctx.scale(scaleX, 1);
                         
-                        /* 套用亮度濾鏡 (只針對正在閃的金幣) */
                         if (brightness > 105) {
                             this.ctx.filter = `brightness(${brightness}%)`;
                         }
@@ -732,7 +772,6 @@
                         }
                         this.ctx.restore();
                     } else {
-                        /* 閃爍粒子 */
                         p.alpha -= p.decay;
                         if(p.alpha <= 0) {
                             this.particles.splice(i, 1);
@@ -832,14 +871,15 @@
                 totalWeightFree += w;
             });
 
+            /* ★ V13.86 優化權重：稍微降低 x2，提高 x10/x25 (不累加模式補償) ★ */
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
             
             if (scatterCount === 3) {
-                w2 = multiplierQuota * 0.95; w10 = multiplierQuota * 0.05;
+                w2 = multiplierQuota * 0.85; w10 = multiplierQuota * 0.15;
             } else if (scatterCount === 4) {
-                w2 = multiplierQuota * 0.90; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.02;
+                w2 = multiplierQuota * 0.80; w10 = multiplierQuota * 0.15; w25 = multiplierQuota * 0.05;
             } else {
-                w2 = multiplierQuota * 0.88; w10 = multiplierQuota * 0.08; w25 = multiplierQuota * 0.038; w100 = multiplierQuota * 0.002;
+                w2 = multiplierQuota * 0.75; w10 = multiplierQuota * 0.15; w25 = multiplierQuota * 0.09; w100 = multiplierQuota * 0.01;
             }
             if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
             if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
@@ -851,7 +891,6 @@
         let gridData = []; let isSpinning = false; let score = 0; 
         let promoInterval = null;
 
-        // ★ 新增：資源預載邏輯 (Loader)
         window.onload = () => {
             const imageAssets = [
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
@@ -884,7 +923,6 @@
                 }
             };
 
-            // 載入圖片
             imageAssets.forEach(src => {
                 const img = new Image();
                 img.onload = updateProgress;
@@ -892,38 +930,26 @@
                 img.src = src;
             });
 
-            // 載入音效 (簡單請求)
             audioAssets.forEach(src => {
                 const aud = new Audio();
                 aud.oncanplaythrough = updateProgress;
                 aud.onerror = updateProgress;
                 aud.src = src;
-                // 有些瀏覽器不預載 Audio，為了不卡死，我們設個 timeout 強制完成
                 setTimeout(updateProgress, 2000); 
             });
         };
 
-        // ★ 新增：點擊開始遊戲按鈕 (解鎖音效 + 進入遊戲)
         document.getElementById('btn-start-game').addEventListener('click', () => {
-            // 1. 隱藏 Loading 層
             const loadingLayer = document.getElementById('loading-layer');
             loadingLayer.classList.add('hidden');
             setTimeout(() => loadingLayer.style.display = 'none', 500);
 
-            // 2. 顯示遊戲舞台
             document.getElementById('game-stage').classList.add('loaded');
-
-            // 3. 初始化音效 (這是解鎖的關鍵！)
             AudioMgr.init();
-            
-            // 4. 初始化金幣系統
             CoinManager.init();
-
-            // 5. 執行原本的遊戲初始化
             initGameLogic();
         });
 
-        // 將原本的 window.onload 裡的邏輯移到這裡
         function initGameLogic() {
             initGrid(); fillRandom(false); updateAllUI(); 
             
@@ -961,7 +987,6 @@
                 AudioMgr.toggle(e.target.checked);
             });
 
-            // 購買視窗按鈕
             document.getElementById('btn-buy-cancel').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
                 document.getElementById('buy-modal').classList.remove('active');
@@ -1121,29 +1146,21 @@
             }
         }
 
-        // 修改後的開啟視窗函式
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
-            
-            // 檢查餘額
-            const buyCost = gameData.bet * 250;
+            /* ★ V13.86: 修正為 100倍 ★ */
+            const buyCost = gameData.bet * 100;
             if (gameData.credit < buyCost) { 
                 alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); 
                 return; 
             }
-
-            // 設定顯示金額
             document.getElementById('buy-price-text').innerText = buyCost.toLocaleString();
-            
-            // 顯示自製彈窗 (這樣就不會卡住背景影片了！)
             document.getElementById('buy-modal').classList.add('active');
         }
 
-        // 真正的購買執行函式 (由 "確定購買" 按鈕觸發)
         async function executeBuy() {
-            const buyCost = gameData.bet * 250;
-            
-            // 再次檢查 (防止非同步漏洞)
+            /* ★ V13.86: 修正為 100倍 ★ */
+            const buyCost = gameData.bet * 100;
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
@@ -1151,7 +1168,6 @@
             isBuyingFeature = true;
             isAutoPlay = false;
 
-            // 強制讓瀏覽器休息一下，確保視窗關閉動畫跑完
             await new Promise(r => requestAnimationFrame(r));
             await new Promise(r => setTimeout(r, 100)); 
 
@@ -1280,7 +1296,10 @@
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
                 if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
-                gameData.accumulatedMultiplier = 0; resetMultiplierUI(); gameData.currentWin = 0;
+                /* ★ V13.85: 重置倍數 (不累加) ★ */
+                gameData.accumulatedMultiplier = 0; 
+                resetMultiplierUI(); 
+                gameData.currentWin = 0;
             } else { 
                 gameData.freeSpinsLeft--; 
                 updateFreeGameMessage('spin', gameData.freeSpinsLeft);
@@ -1291,7 +1310,6 @@
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    /* ★ V13.55: 停輪間隔改為 300ms */
                     await wait(c * 300); 
                     
                     let colDiv = document.getElementById(`col-${c}`);
@@ -1353,7 +1371,6 @@
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
 
-                    /* JS 時間設定為 2000ms，配合 CSS 2.0s */
                     await wait(2000); 
                     
                     AudioMgr.playSFX('stop');
@@ -1425,11 +1442,12 @@
 
             if (matches.size > 0) { 
                 tempMulCoords.forEach(key => matches.add(key));
-                let totalMul = gameData.accumulatedMultiplier + spinMultipliers;
-                if (totalMul < 1) totalMul = 1;
+                
+                /* ★ V13.85: 只計算當局倍數 (不累加) ★ */
+                let totalMul = (spinMultipliers > 0) ? spinMultipliers : 1;
 
                 if (gameData.isFreeGame && spinMultipliers > 0) {
-                    gameData.accumulatedMultiplier += spinMultipliers; updateMultiplierUI();
+                   updateMultiplierUI(); 
                 }
 
                 let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
