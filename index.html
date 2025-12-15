@@ -294,15 +294,19 @@
         #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #info-modal.active { display: flex; opacity: 1; }
         .info-content { 
-    /* ...原有設定保持不變... */
+    /* --- 原有外觀設定 --- */
     background: linear-gradient(180deg, #6a0dad 0%, #3a005f 100%); 
     width: 90%; height: 80%; border-radius: 20px; border: 2px solid #8a2be2; 
     padding: 20px; 
     
-    /* ★ 修改/確認這幾行 ★ */
-    overflow-y: auto;          /* 允許垂直捲動 */
-    touch-action: pan-y;       /* ★ 關鍵：允許垂直拖曳手勢，覆蓋掉 body 的 none */
-    -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動有慣性效果，手感更好 */
+    /* --- 滑動功能 (保持不變) --- */
+    overflow-y: auto;          
+    touch-action: pan-y;       
+    -webkit-overflow-scrolling: touch;
+
+    /* --- ★ 新增：修正文字顏色與排版 ★ --- */
+    color: #fff;               /* 強制所有說明文字預設為白色 */
+    text-align: center;        /* 讓大部分內容置中 */
 }
         .info-content::-webkit-scrollbar { width: 12px; }
         .info-content::-webkit-scrollbar-track { background: transparent; margin-block: 10px; }
@@ -325,8 +329,21 @@
         .desc-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.5vh; font-weight: bold; color: #ddd; border-bottom: 1px dashed rgba(255,255,255,0.15); padding: 3px 0; }
         .desc-row:last-child { border-bottom: none; }
         .c-yellow { color: #ffd700; } .c-cyan { color: #00ffff; } .c-red { color: #ff4500; text-shadow: 0 0 2px #ff0000; } .c-white { color: #ffffff; } .c-gray { color: #aaaaaa; font-size: 1.3vh; }
-        .close-btn { margin-top: 20px; background-color: #00bfff; padding: 10px 30px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #008080; }
-        .close-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008080; }
+        .close-btn { 
+    /* --- ★ 修改：讓按鈕水平置中 ★ --- */
+    margin: 20px auto 0 auto;  /* 上距20px, 左右自動(置中), 下距0 */
+    width: fit-content;        /* 寬度隨文字內容調整，不要佔滿整行 */
+    display: block;            /* 確保 margin auto 生效 */
+
+    /* --- 原有外觀保持不變 --- */
+    background-color: #00bfff; 
+    padding: 10px 30px; 
+    border-radius: 50px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    box-shadow: 0 4px 0 #008080; 
+}
+.close-btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #008080; }
 
         /* 設定頁 (Setting Modal) */
         #setting-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2600; display: none; align-items: center; justify-content: center; }
