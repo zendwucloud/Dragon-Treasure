@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.88 高頻觸發版)</title>
+    <title>火龍祕寶 (V13.89 標準營運版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
             margin: 0; padding: 0;
             height: 100%; width: 100%;
-            overflow: hidden; /* 強制隱藏捲動條 */
+            overflow: hidden; 
             background-color: #000;
-            touch-action: none; /* 禁止預設手勢 */
-            position: fixed; /* iOS 防橡皮筋 */
+            touch-action: none; 
+            position: fixed; 
         }
 
         body {
@@ -102,7 +102,6 @@
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
-        /* 火光特效 (混合模式 Overlay) */
         .fire-effect {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5; opacity: 0;
@@ -361,7 +360,7 @@
         #btn-menu-home { left: 52%; top: 23%; width: 13%; height: 9%; }
         #btn-menu-close-bottom { left: 38.5%; bottom: 1%; width: 23%; height: 5%; }
 
-        /* 說明頁 (Info Modal) */
+        /* 說明頁 (Info Modal) - ★ V13.89 修復版 ★ */
         #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #info-modal.active { display: flex; opacity: 1; }
         .info-content { 
@@ -408,6 +407,12 @@
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #ffd700; }
         input:checked + .slider:before { transform: translateX(26px); }
+
+        /* 規則文字區 */
+        .rules-container { margin-top: 15px; text-align: left; padding: 10px 5px; border-top: 1px solid rgba(255,255,255,0.3); }
+        .rules-list { list-style-type: none; padding: 0; margin: 0; font-size: 1.5vh; color: #f0f0f0; line-height: 1.6; }
+        .rules-list li { margin-bottom: 8px; padding-left: 10px; border-left: 3px solid #ffd700; }
+        .rules-list strong { color: #fff; font-weight: 900; margin-right: 5px; }
 
         /* 購買確認視窗樣式 */
         #buy-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2800; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
@@ -826,8 +831,8 @@
             8:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
             9:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
             10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
-            /* ★ V13.88 修改：SCATTER 權重提高至 9.8 (約1/150觸發) ★ */
-            11: { type: 'scatter', weight: 9.8, inBase: true, inFree: true }, 
+            /* ★ V13.89 調整：SCATTER 權重 5.5 (約 300局 觸發一次) ★ */
+            11: { type: 'scatter', weight: 5.5, inBase: true, inFree: true }, 
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -882,7 +887,6 @@
                 totalWeightFree += w;
             });
 
-            /* ★ V13.86 優化權重：稍微降低 x2，提高 x10/x25 (不累加模式補償) ★ */
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
             
             if (scatterCount === 3) {
@@ -1068,6 +1072,7 @@
             showPromoMessage(); startPromoLoop();
         }
 
+        /* ★ V13.89: 恢復「美化版」的說明頁生成函數 (圖文並茂) ★ */
         function generatePaytable() {
             const container = document.getElementById('paytable-container');
             container.innerHTML = '';
@@ -1146,7 +1151,7 @@
                         <span>解鎖 <span class="c-red" style="font-size:1.6vh; text-shadow:0 0 5px red;">x100</span> 頂級倍數!</span>
                     </div>
                     <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">
-                        *倍數僅乘算當局贏分 (不累積)
+                        *倍數僅乘算當局贏分
                     </div>
                 </div>
             </div>`;
@@ -1189,8 +1194,6 @@
         async function executeBuy() {
             /* ★ V13.86: 修正為 100倍 ★ */
             const buyCost = gameData.bet * 100;
-            
-            // 再次檢查 (防止非同步漏洞)
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
@@ -1198,7 +1201,6 @@
             isBuyingFeature = true;
             isAutoPlay = false;
 
-            // 強制讓瀏覽器休息一下，確保視窗關閉動畫跑完
             await new Promise(r => requestAnimationFrame(r));
             await new Promise(r => setTimeout(r, 100)); 
 
@@ -1341,7 +1343,6 @@
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    /* ★ V13.55: 停輪間隔改為 300ms ★ */
                     await wait(c * 300); 
                     
                     let colDiv = document.getElementById(`col-${c}`);
