@@ -3,22 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.81 7.9鎖定版)</title>
+    <title>火龍祕寶 (V13.82 終極鎖定版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
+        html, body {
+            margin: 0; padding: 0;
+            height: 100%; width: 100%;
+            overflow: hidden; /* ★ 強制隱藏溢出，防止捲動條出現 */
+            background-color: #000;
+            
+            /* ★ V13.81: 禁止瀏覽器預設手勢 */
+            touch-action: none; 
+            
+            /* ★ V13.82: 防止 iOS 橡皮筋效果 */
+            position: fixed; 
+        }
+
         body {
             background-image: url('background.jpg'); 
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            margin: 0; height: 100vh; width: 100vw;
             display: flex; justify-content: center; align-items: center;
-            overflow: hidden; font-family: 'Arial', sans-serif;
+            font-family: 'Arial', sans-serif;
             user-select: none; -webkit-user-select: none;
-            background-color: #000;
-            
-            /* ★ V13.81 新增：禁止瀏覽器預設手勢(縮放/拖曳) ★ */
-            touch-action: none; 
         }
 
         .stage {
@@ -28,7 +36,7 @@
             max-width: 100vw;
             aspect-ratio: 720/1280;
             background-color: transparent; 
-            opacity: 0; /* 預設隱藏，載入完才顯示 */
+            opacity: 0; 
             transition: opacity 0.5s ease-in;
         }
         .stage.loaded { opacity: 1; }
@@ -112,11 +120,11 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- ★ V13.63 新增：獨立黑色遮罩層 (Level 1) ★ --- */
+        /* --- 獨立黑色遮罩層 (Level 1) --- */
         #fg-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); /* 黑色半透明背景在這裡 */
-            z-index: 2500; /* 最底層 */
+            background-color: rgba(0, 0, 0, 0.7); 
+            z-index: 2500; 
             opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out;
         }
         #fg-mask.active { opacity: 1; pointer-events: auto; }
@@ -125,7 +133,7 @@
         /* --- Canvas 金幣層 (Level 2) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2600; /* 夾在遮罩(2500)與視窗(2700)中間 */
+            z-index: 2600; 
             pointer-events: none; 
         }
 
@@ -260,12 +268,11 @@
             100% { transform: translateY(0); } 
         }
 
-        /* --- ★ V13.63 修正：報獎視窗層級 (Level 3) ★ --- */
+        /* --- 報獎視窗層級 (Level 3) --- */
         #fg-end-modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            /* 移除黑色背景，改由 fg-mask 負責 */
             background-color: transparent; 
-            z-index: 2700; /* 最上層，蓋過金幣 */
+            z-index: 2700; 
             display: flex; justify-content: center; align-items: center; 
             opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; 
         }
@@ -302,9 +309,9 @@
             box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); 
             padding-right: 15px;
 
-            /* ★ V13.81 新增：允許此區塊垂直捲動 ★ */
+            /* ★ V13.81: 允許此區塊垂直捲動 ★ */
             touch-action: pan-y;
-            -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更順暢 */
+            -webkit-overflow-scrolling: touch; 
         }
         .info-content::-webkit-scrollbar { width: 12px; }
         .info-content::-webkit-scrollbar-track { background: transparent; margin-block: 10px; }
@@ -1627,17 +1634,54 @@
         function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
         function getSymbolEl(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
     
-        /* ★ V13.81 新增：針對 iOS Safari 禁止雙指縮放 ★ */
+        /* ★ V13.82: 針對 iOS 下拉重整進行暴力鎖定 ★ */
         document.addEventListener('gesturestart', function (e) {
             e.preventDefault();
         });
 
-        /* ★ V13.81 新增：禁止雙指以上操作 (防止縮放) ★ */
-        document.addEventListener('touchmove', function(event) {
-            if (event.touches.length > 1) {
-                event.preventDefault();
+        // 監聽 touchmove 事件，若非在 .info-content 內滑動，則全面禁止
+        document.addEventListener('touchmove', function(e) {
+            // 檢查是否正在滑動說明頁
+            let target = e.target;
+            let isScrollable = false;
+            
+            while(target) {
+                if (target.classList && target.classList.contains('info-content')) {
+                    isScrollable = true;
+                    break;
+                }
+                target = target.parentNode;
+            }
+
+            if (!isScrollable) {
+                // 如果不是在說明頁內，直接殺死滑動事件
+                e.preventDefault();
+            } else {
+                // 如果在說明頁內，檢查是否滑到底部或頂部，防止橡皮筋效果傳導到 body
+                let el = document.querySelector('.info-content');
+                let scrollTop = el.scrollTop;
+                let scrollHeight = el.scrollHeight;
+                let height = el.clientHeight;
+                let deltaY = e.touches[0].clientY - (el.lastY || e.touches[0].clientY);
+                el.lastY = e.touches[0].clientY;
+
+                // 向上滑到底
+                if (scrollTop === 0 && deltaY > 0) {
+                    e.preventDefault();
+                }
+                // 向下滑到底
+                if (scrollTop + height >= scrollHeight && deltaY < 0) {
+                    e.preventDefault();
+                }
             }
         }, { passive: false });
+
+        document.addEventListener('touchstart', function(e) {
+             // 紀錄起始點，供 touchmove 判斷方向
+             let el = document.querySelector('.info-content');
+             if(el) el.lastY = e.touches[0].clientY;
+        }, { passive: false });
+
     </script>
 </body>
 </html>
