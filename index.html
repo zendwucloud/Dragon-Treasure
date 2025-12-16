@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.104)</title>
+    <title>火龍祕寶 Dragon's Treasure(V13.105)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -14,25 +14,6 @@
             touch-action: none; 
             position: fixed; 
         }
-
-/* ★ 新增：全域禁止圖片拖曳 (防止誤觸 Spin 或其他 UI) ★ */
-        img {
-            -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
-            user-drag: none;
-            user-select: none;
-            -webkit-user-select: none;
-            pointer-events: none; /* 讓點擊穿透圖片，直接觸發下方按鈕 */
-        }
-        /* 開放部分需要點擊的圖片 (如果有) */
-        .phone-button, .buy-button {
-            pointer-events: auto;
-            cursor: pointer;
-        }
-
-
 
         body {
             background-image: url('background.jpg'); 
@@ -81,18 +62,18 @@
         }
 
         .loading-bottom-ui {
-            position: relative; z-index: 10; width: 85%; margin-bottom: 8%;
+            position: relative; z-index: 10; width: 70%; margin-bottom: 12%;
             display: flex; flex-direction: column; align-items: center; text-align: center;
         }
 
         .loading-text { 
             font-family: 'Arial Black', sans-serif; color: #ffd700; font-size: 2.2vh; 
-            margin-bottom: 1.5vh; text-shadow: 0 0 5px #000, 0 0 10px #ff4500; letter-spacing: 1px; 
+            margin-bottom: 1vh; text-shadow: 0 0 5px #000, 0 0 10px #ff4500; letter-spacing: 1px; 
         }
         
         .progress-bar-bg {
             width: 100%; height: 1.5vh; background: rgba(0, 0, 0, 0.6); 
-            border: 2px solid #ffd700; border-radius: 10px; overflow: hidden;
+            border: 2px solid #ffd700; border-radius:10px; overflow: hidden;
             box-shadow: 0 0 15px rgba(0,0,0,0.8);
         }
         .progress-bar-fill {
