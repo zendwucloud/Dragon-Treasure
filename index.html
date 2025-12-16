@@ -1509,36 +1509,79 @@
         }
 
         async function checkLogic() {
-            let matches = new Set(); let roundScore = 0; let tempMulCoords = []; let spinMultipliers = 0;
+            let matches = new Set(); 
+            let roundScore = 0; 
+            let tempMulCoords = []; 
+            let spinMultipliers = 0;
+
+            // 1. 先計算畫面上的龍眼倍數總合
             for(let c=0; c<config.cols; c++) {
                 for(let r=0; r<config.rows; r++) {
                     let id = gridData[c][r];
-                    if(SYMBOLS[id].type === 'mul') { spinMultipliers += SYMBOLS[id].val; tempMulCoords.push(`${c},${r}`); }
+                    if(SYMBOLS[id].type === 'mul') { 
+                        spinMultipliers += SYMBOLS[id].val; 
+                        tempMulCoords.push(`${c},${r}`); 
+                    }
                 }
             }
+
+            // 2. 針對每一個符號ID進行連線判定
             for(let targetId=1; targetId<=9; targetId++) {
+                // 如果是免費遊戲，忽略低分符號 (6,7,8,9)
                 if(gameData.isFreeGame && targetId >= 6) continue;
-                let consecutiveCols = 0; let tempMatches = [];
+
+                let consecutiveCols = 0; 
+                let currentWayCount = 1; // ★ 新增：路數乘積 (預設為1)
+                let tempMatches = [];
+                let hasConnectionBreak = false; // 用來標記連線是否斷掉
+
                 for(let c=0; c<config.cols; c++) {
-                    let hasSymbol = false;
+                    if (hasConnectionBreak) break; // 斷掉就不用看後面卷軸了
+
+                    let countOnReel = 0; // ★ 新增：計算這一軸有幾個能用的符號
+                    
                     for(let r=0; r<config.rows; r++) {
                         let id = gridData[c][r];
-                        if(id === targetId || id === 10) { hasSymbol = true; tempMatches.push(`${c},${r}`); }
+                        // 檢查是否為目標符號 或 WILD (ID 10)
+                        if(id === targetId || id === 10) { 
+                            countOnReel++; 
+                            tempMatches.push(`${c},${r}`); 
+                        }
                     }
-                    if(hasSymbol) consecutiveCols++; else break;
+
+                    if(countOnReel > 0) {
+                        consecutiveCols++;
+                        currentWayCount *= countOnReel; // ★ 核心邏輯：路數相乘 (例如 2個 * 3個 * 1個...)
+                    } else {
+                        hasConnectionBreak = true; // 這一軸沒符號，連線中斷
+                    }
                 }
+
+                // 3. 結算該符號獎金
                 if(consecutiveCols >= 3) {
                     let payout = SYMBOLS[targetId].payouts[consecutiveCols];
                     if(payout) {
-                        roundScore += payout * (gameData.bet / 20); 
-                        tempMatches.forEach(key => { let [mc, mr] = key.split(',').map(Number); if(mc < consecutiveCols) matches.add(key); });
+                        // ★ 修正獎金公式：賠率 * 單注(bet/20) * 路數(Ways)
+                        // 假設下注 100，單注是 5。
+                        // 如果全盤 (243路)，且賠率是 30，那就是 30 * 5 * 243 = 36,450
+                        roundScore += payout * (gameData.bet / 20) * currentWayCount; 
+                        
+                        // 將中獎座標加入總集合，用於播放動畫
+                        tempMatches.forEach(key => { 
+                            let [mc, mr] = key.split(',').map(Number); 
+                            // 只將有效連線範圍內的符號加入 (例如連線3軸，第4軸的符號就不算)
+                            if(mc < consecutiveCols) matches.add(key); 
+                        });
                     }
                 }
             }
+
+            // --- 下面邏輯保持不變 (SCATTER 判定與動畫處理) ---
 
             let scatterCount = 0;
             for(let c=0; c<config.cols; c++) { for(let r=0; r<config.rows; r++) { if(gridData[c][r] === 11) scatterCount++; } }
 
+            // 觸發 Scatter 動畫
             if (scatterCount >= 3 && !gameData.isFreeGame) {
                 for(let c=0; c<config.cols; c++) {
                     for(let r=0; r<config.rows; r++) {
@@ -1555,37 +1598,36 @@
                 }
             }
 
+            // 有贏分
             if (matches.size > 0) { 
                 tempMulCoords.forEach(key => matches.add(key));
                 
-                /* ★ V13.85: 只計算當局倍數 (不累加) ★ */
                 let totalMul = (spinMultipliers > 0) ? spinMultipliers : 1;
 
                 if (gameData.isFreeGame && spinMultipliers > 0) {
                    updateMultiplierUI(); 
                 }
 
-                let finalWin = roundScore * totalMul; gameData.currentWin += finalWin; 
-                updateAllUI(); triggerWinAnimation(); showWinMessage(gameData.currentWin);
+                let finalWin = roundScore * totalMul; 
+                gameData.currentWin += finalWin; 
+                updateAllUI(); 
+                triggerWinAnimation(); 
+                showWinMessage(gameData.currentWin);
 
-                if (gameData.isFreeGame) { updateFreeGameMessage('win', gameData.currentWin); }
+                // 音效邏輯
+                if (gameData.isFreeGame) AudioMgr.playSFX('winFree');
+                else if (finalWin > gameData.bet * 10) AudioMgr.playSFX('bigWin');
+                else AudioMgr.playSFX('win');
 
-                if (finalWin > gameData.bet * 10) {
-                    AudioMgr.playSFX('bigWin');
-                } else {
-                    if(gameData.isFreeGame) AudioMgr.playSFX('winFree');
-                    else AudioMgr.playSFX('win');
-                }
-
+                // 龍叫聲
                 let hasWildWin = false;
                 matches.forEach(key => {
                     let [c, r] = key.split(',');
                     if (gridData[c][r] === 10) hasWildWin = true;
                 });
-                if (hasWildWin) {
-                    AudioMgr.playSFX('dragon');
-                }
+                if (hasWildWin) AudioMgr.playSFX('dragon');
 
+                // 贏分動畫
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = getSymbolEl(c, r);
                     if(el) {
@@ -1598,10 +1640,11 @@
                 });
 
                 await wait(2000); 
+
+                // 消除與爆炸
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = getSymbolEl(c, r);
                     if(el) { 
-                         /* ★ V13.103: 爆炸特效 (校正左移) ★ */
                         el.classList.remove('anim-win'); 
                         el.classList.remove('active'); 
                         el.classList.add('anim-explode'); 
@@ -1614,6 +1657,7 @@
                 
                 await doRefill(matches); 
 
+                // 消除後檢查 SCATTER (可能掉下來新的湊齊3個)
                 let currentScatterCount = 0;
                 for(let c=0; c<config.cols; c++) {
                     for(let r=0; r<config.rows; r++) {
@@ -1630,6 +1674,7 @@
                 }
 
             } else {
+                // 沒贏分，檢查是否進入 FG 或結束
                 if (scatterCount >= 3 && !gameData.isFreeGame) {
                     AudioMgr.playSFX('scatter');
                     document.querySelectorAll('.sym-scatter').forEach(el => {
