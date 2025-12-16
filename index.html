@@ -15,6 +15,25 @@
             position: fixed; 
         }
 
+/* ★ 新增：全域禁止圖片拖曳 (防止誤觸 Spin 或其他 UI) ★ */
+        img {
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: none; /* 讓點擊穿透圖片，直接觸發下方按鈕 */
+        }
+        /* 開放部分需要點擊的圖片 (如果有) */
+        .phone-button, .buy-button {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+
+
         body {
             background-image: url('background.jpg'); 
             background-size: cover;
