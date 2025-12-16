@@ -979,7 +979,10 @@
 
         // 將原本的 window.onload 裡的邏輯移到這裡
         function initGameLogic() {
-            initGrid(); fillRandom(false); updateAllUI(); 
+            initGrid(); 
+            // fillRandom(false); // 原本是依照權重 (低分符號多)
+            fillInitialVisuals(); // ★ 改用新的平均隨機填充 (視覺效果較好)
+            updateAllUI(); 
             
             document.getElementById('btn-phone').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
@@ -1081,6 +1084,32 @@
             });
             
             showPromoMessage(); startPromoLoop();
+        }
+
+/* ★ V13.106: 新增初始畫面填充函式 (平均分佈，不含龍眼，純展示用) ★ */
+        function fillInitialVisuals() {
+            // 定義要出現的符號 ID (1-9:一般, 10:Wild, 11:Scatter)
+            // 不包含 20, 21, 22, 23 (龍眼)，這樣初始盤面就不會有龍眼
+            const displayPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            
+            for(let c=0; c<config.cols; c++) {
+                const colDiv = document.getElementById(`col-${c}`); 
+                gridData[c] = []; 
+                colDiv.innerHTML = '';
+                
+                for(let r=0; r<config.rows; r++) {
+                    // 使用 Math.random() 平均隨機從池中選一個，讓高分符號和特殊符號更容易露臉
+                    let randIndex = Math.floor(Math.random() * displayPool.length);
+                    let type = displayPool[randIndex];
+                    
+                    gridData[c].push(type);
+                    
+                    // 建立 DOM (不加動畫，靜態顯示)
+                    let el = createSymbol(type); 
+                    el.setAttribute('data-row', r);
+                    colDiv.appendChild(el);
+                }
+            }
         }
 
         /* ★ V13.94: Auto Play UI 更新函式 ★ */
