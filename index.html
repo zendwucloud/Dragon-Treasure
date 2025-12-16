@@ -814,19 +814,28 @@
     <script>
         const config = { cols: 5, rows: 3 }; 
         
+        /* ★ V13.111: 平衡版賠率 (提高賠率以修復 243 Ways 的 MG RTP) ★ */
         const SYMBOLS = {
-            1:  { type: 'high', payouts: {3: 3, 4: 10, 5: 30},  weight: 8, inBase: true, inFree: true }, 
-            2:  { type: 'high', payouts: {3: 2.5, 4: 8, 5: 25}, weight: 10, inBase: true, inFree: true },
-            3:  { type: 'high', payouts: {3: 2, 4: 6, 5: 20},   weight: 12, inBase: true, inFree: true },
-            4:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
-            5:  { type: 'mid',  payouts: {3: 1.5, 4: 4, 5: 15}, weight: 20, inBase: true, inFree: true },
-            6:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
-            7:  { type: 'low',  payouts: {3: 0.5, 4: 2, 5: 8},  weight: 60, inBase: true, inFree: false },
-            8:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
-            9:  { type: 'low',  payouts: {3: 0.2, 4: 1, 5: 4},  weight: 70, inBase: true, inFree: false },
+            /* 高分符號：賠率顯著提升，讓 5 連線有大獎感 */
+            1:  { type: 'high', payouts: {3: 10, 4: 50, 5: 200}, weight: 8, inBase: true, inFree: true }, 
+            2:  { type: 'high', payouts: {3: 8,  4: 40, 5: 150}, weight: 10, inBase: true, inFree: true },
+            3:  { type: 'high', payouts: {3: 5,  4: 25, 5: 100}, weight: 12, inBase: true, inFree: true },
+            
+            /* 中分符號 */
+            4:  { type: 'mid',  payouts: {3: 3,  4: 15, 5: 50},  weight: 20, inBase: true, inFree: true },
+            5:  { type: 'mid',  payouts: {3: 3,  4: 15, 5: 50},  weight: 20, inBase: true, inFree: true },
+            
+            /* 低分符號：權重稍微降低 (45/55)，賠率微調以防太咬 */
+            6:  { type: 'low',  payouts: {3: 1,  4: 5,  5: 20},  weight: 45, inBase: true, inFree: false },
+            7:  { type: 'low',  payouts: {3: 1,  4: 5,  5: 20},  weight: 45, inBase: true, inFree: false },
+            8:  { type: 'low',  payouts: {3: 0.5, 4: 3, 5: 10},  weight: 55, inBase: true, inFree: false },
+            9:  { type: 'low',  payouts: {3: 0.5, 4: 3, 5: 10},  weight: 55, inBase: true, inFree: false },
+            
+            /* Wild & Scatter */
             10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
-            /* ★ V13.97 調整：SCATTER 權重 5.5 (約 300局 觸發一次) ★ */
             11: { type: 'scatter', weight: 5.5, inBase: true, inFree: true }, 
+            
+            /* 龍眼倍數 (權重設為0，由 updateFreeGameWeights 動態控制) */
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -862,39 +871,59 @@
         }
         initBasePool(); 
 
+        /* ★ V13.111: 平衡版 FG 權重 (配合高賠率表，降低 FG 高分符號與倍數出現率) ★ */
         function updateFreeGameWeights(scatterCount) {
             poolFree = [];
             totalWeightFree = 0;
             const symbolQuota = 750; 
             const multiplierQuota = 250; 
 
+            // 1. 設定 FG 符號權重 (壓低高分符號出現率)
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            let originalSum = 0;
-            connectableSymbols.forEach(id => { originalSum += SYMBOLS[id].weight; });
             
-            connectableSymbols.forEach(id => {
-                let s = SYMBOLS[id];
-                let w = (s.weight / originalSum) * symbolQuota;
-                if (id <= 3) w *= 0.3; 
-                if (id === 4 || id === 5) w *= 1.2; 
-                if (id === 10) w *= 0.55; 
-                if (scatterCount === 3 && id === 10) w *= 1.2; 
-                if (id === 11) w = 0.1; 
+            // 手動設定相對比例 (數字越小越難出)
+            let ratios = {
+                1: 8,   // 紅龍 (賠率200，必須非常難出)
+                2: 12,
+                3: 15,
+                4: 50,  // 中分符號可以多一點
+                5: 50,
+                10: 12, // Wild 也要控制，避免輕易全盤
+                11: 2   // Scatter 在 FG 裡很難再中 (Retrigger)
+            };
 
+            let ratioSum = 0;
+            for(let id in ratios) ratioSum += ratios[id];
+
+            // 根據比例分配 symbolQuota
+            connectableSymbols.forEach(id => {
+                let w = (ratios[id] / ratioSum) * symbolQuota;
+                // 特殊加成
+                if (scatterCount === 3 && id === 10) w *= 1.2; 
                 poolFree.push({ id: id, weight: w });
                 totalWeightFree += w;
             });
 
-            /* ★ V13.86 優化權重：稍微降低 x2，提高 x10/x25 (不累加模式補償) ★ */
+            // 2. 設定龍眼倍數權重 (嚴格控制高倍數)
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
             
             if (scatterCount === 3) {
-                w2 = multiplierQuota * 0.85; w10 = multiplierQuota * 0.15;
+                // 5局: 主要是 x2
+                w2 = multiplierQuota * 0.95; 
+                w10 = multiplierQuota * 0.05;
             } else if (scatterCount === 4) {
-                w2 = multiplierQuota * 0.80; w10 = multiplierQuota * 0.15; w25 = multiplierQuota * 0.05;
+                // 10局: 混和 x2, x10
+                w2 = multiplierQuota * 0.70; 
+                w10 = multiplierQuota * 0.28; 
+                w25 = multiplierQuota * 0.02;
             } else {
-                w2 = multiplierQuota * 0.75; w10 = multiplierQuota * 0.15; w25 = multiplierQuota * 0.09; w100 = multiplierQuota * 0.01;
+                // 15局: 才有機會看到 x100，但機率極低
+                w2 = multiplierQuota * 0.50; 
+                w10 = multiplierQuota * 0.40; 
+                w25 = multiplierQuota * 0.09; 
+                w100 = multiplierQuota * 0.01; // 1% 機率出現 x100
             }
+
             if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
             if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
             if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
