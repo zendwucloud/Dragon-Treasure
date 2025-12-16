@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>火龍祕寶 (V13.89 標準營運版)</title>
+    <title>火龍祕寶 (V13.93)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -102,6 +102,7 @@
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
+        /* 火光特效 (混合模式 Overlay) */
         .fire-effect {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5; opacity: 0;
@@ -265,6 +266,24 @@
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
         .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
 
+        /* 爆炸特效 */
+        .vfx-explosion {
+            position: absolute; top: 50%; left: 50%;
+            width: 150%; height: 150%; 
+            transform: translate(-50%, -50%);
+            background-image: url('explosion_sprite.png');
+            background-size: 800% 100%; 
+            background-position: 0 0;
+            animation: runExplosion 0.6s steps(8) forwards; 
+            z-index: 2000;
+            pointer-events: none;
+        }
+        @keyframes runExplosion {
+            0% { background-position: 0% 0%; opacity: 1; }
+            99% { opacity: 1; }
+            100% { background-position: 100% 0%; opacity: 0; }
+        }
+
         /* UI 文字 */
         .value-text { color: #fff; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 2px 2px 2px #000; position: absolute; z-index: 500; pointer-events: none; white-space: nowrap; }
         #ui-credit { bottom: 7.6%; left: 16%; transform: translateX(-50%); font-size: 2.2vh; text-align: center; }
@@ -319,6 +338,21 @@
             background-color: rgba(255, 0, 0, 0); 
             border: 0px solid red; border-radius: 50%; 
             z-index: 1000; cursor: pointer; 
+        }
+        
+        /* ★ V13.93 修正：改回半透明紅色以便看見 (調好後可改回 0.0) ★ */
+        #btn-turbo-toggle {
+            position: absolute;
+            right: 20.1%; bottom: 12.1%; 
+            width: 4vh; height: 4vh;
+            background-color: rgba(255, 0, 0, 0); /* 這裡改回了 0.5 */
+            border-radius: 50%;
+            z-index: 2000;
+            cursor: pointer;
+        }
+        #btn-turbo-toggle.active {
+            background-color: rgba(255, 255, 0, 0.6); /* 開啟時變亮黃色 */
+            box-shadow: 0 0 10px yellow;
         }
 
         /* 符號落地回彈 */
@@ -457,6 +491,8 @@
         <div class="reel-viewport">
             <div class="grid-container" id="grid"></div>
         </div>
+        
+        <div id="btn-turbo-toggle"></div>
 
         <div id="ui-credit" class="value-text">100,000.00</div>
         <div id="ui-win" class="value-text">0.00</div>
@@ -565,7 +601,6 @@
             currentBGM: null,
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
-            // ★ 解鎖音效的函式
             init: function() {
                 document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
                 const bgmMain = document.getElementById('bgm_main');
@@ -643,7 +678,6 @@
     </script>
 
     <script>
-        /* ★ V13.83 整合：移植自 8.0 版的金幣邏輯 (尺寸放大3倍/閃光/3D翻轉/星星粒子) ★ */
         const CoinManager = {
             canvas: null,
             ctx: null,
@@ -670,7 +704,6 @@
             },
 
             fire: function(amount) {
-                /* 減少粒子數量 (優化) */
                 let count = 10; 
                 let sparkleCount = 5;
 
@@ -702,14 +735,11 @@
                         vx: (Math.random() - 0.5) * (w * 0.03), 
                         vy: -(Math.random() * h * 0.025 + h * 0.015), 
                         gravity: h * 0.0005,
-                        /* V13.66 修改：金幣尺寸放大 3 倍 (*3) */
                         size: (Math.random() * 30 + 30) * (w / 720) * 3, 
                         rotation: Math.random() * 360,
                         rSpeed: (Math.random() - 0.5) * 10,
-                        /* V13.67 翻轉參數 */
                         flip: Math.random() * Math.PI, 
                         flipSpeed: Math.random() * 0.2 + 0.1,
-                        /* V13.68 閃光參數 */
                         isFlashing: false,
                         flashTimer: 0,
                         flashDuration: 30 // 約 0.5 秒 (60fps)
@@ -745,7 +775,6 @@
                         p.rotation += p.rSpeed;
                         p.flip += p.flipSpeed;
 
-                        /* ★ V13.69 修正：提高閃光觸發機率至 5% ★ */
                         if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
                             p.isFlashing = true;
                             p.flashTimer = 0;
@@ -754,7 +783,6 @@
                         let brightness = 100; 
                         if (p.isFlashing) {
                             p.flashTimer++;
-                            // 正弦波計算亮度：100% -> 200% -> 100%
                             let progress = p.flashTimer / p.flashDuration;
                             brightness = 100 + 100 * Math.sin(progress * Math.PI);
                             
@@ -767,11 +795,9 @@
                         this.ctx.translate(p.x, p.y);
                         this.ctx.rotate(p.rotation * Math.PI / 180);
                         
-                        /* 假 3D 翻轉 */
                         let scaleX = Math.cos(p.flip); 
                         this.ctx.scale(scaleX, 1);
                         
-                        /* 套用亮度濾鏡 (只針對正在閃的金幣) */
                         if (brightness > 105) {
                             this.ctx.filter = `brightness(${brightness}%)`;
                         }
@@ -786,7 +812,6 @@
                         }
                         this.ctx.restore();
                     } else {
-                        /* 閃爍粒子 */
                         p.alpha -= p.decay;
                         if(p.alpha <= 0) {
                             this.particles.splice(i, 1);
@@ -848,6 +873,9 @@
         let firstInteraction = false;
         
         let isAutoPlay = false;
+        
+        /* ★ V13.92: 極速模式開關 ★ */
+        let isTurboMode = false;
 
         function initBasePool() {
             poolBase = [];
@@ -866,7 +894,6 @@
         function updateFreeGameWeights(scatterCount) {
             poolFree = [];
             totalWeightFree = 0;
-            const targetTotalWeight = 1000;
             const symbolQuota = 750; 
             const multiplierQuota = 250; 
 
@@ -887,6 +914,7 @@
                 totalWeightFree += w;
             });
 
+            /* ★ V13.86 優化權重：稍微降低 x2，提高 x10/x25 (不累加模式補償) ★ */
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
             
             if (scatterCount === 3) {
@@ -915,7 +943,7 @@
                 "you-win.png", "phone.png", "gui-top.png", "spin.png",
                 "background.jpg", "UI.png", "buy_btn.png", "SCATTER.png", "WILD.png", "WILD_word.png", "SCATTER_word.png",
                 "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png",
-                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png"
+                "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png", "explosion_sprite.png"
             ];
             
             const audioAssets = [
@@ -1037,6 +1065,14 @@
                 document.querySelectorAll('.sym-scatter').forEach(el => el.classList.remove('active'));
                 AudioMgr.playSFX('click');
                 startSpin();
+            });
+            
+            /* ★ V13.92: 綁定極速按鈕事件 (Toggle) ★ */
+            document.getElementById('btn-turbo-toggle').addEventListener('click', () => {
+                isTurboMode = !isTurboMode;
+                const btn = document.getElementById('btn-turbo-toggle');
+                if(isTurboMode) btn.classList.add('active');
+                else btn.classList.remove('active');
             });
 
             document.getElementById('btn-auto').addEventListener('click', (e) => {
@@ -1329,7 +1365,7 @@
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
                 if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
-                /* ★ V13.85: 重置倍數 (不累加) ★ */
+                /* ★ V13.85: 重置倍數 (不累加模式) ★ */
                 gameData.accumulatedMultiplier = 0; 
                 resetMultiplierUI(); 
                 gameData.currentWin = 0;
@@ -1343,7 +1379,9 @@
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    await wait(c * 300); 
+                    /* ★ V13.92: 如果是 Turbo Mode，延遲歸零，否則依序啟動 ★ */
+                    let delay = isTurboMode ? 0 : c * 300;
+                    await wait(delay); 
                     
                     let colDiv = document.getElementById(`col-${c}`);
                     let currentSyms = [...gridData[c]];
@@ -1403,17 +1441,29 @@
                     let movePct = (symbolsToMove / totalSymbols) * 100;
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
+                    
+                    /* ★ V13.92: 如果是 Turbo Mode，強制縮短動畫時間為 1000ms ★ */
+                    let spinTime = isTurboMode ? 1000 : 2000;
+                    if(isTurboMode) {
+                        stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                    } else {
+                        stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                    }
 
-                    /* JS 時間設定為 2000ms，配合 CSS 2.0s */
-                    await wait(2000); 
+                    await wait(spinTime); 
                     
                     AudioMgr.playSFX('stop');
-                    await wait(100);
+                    /* Turbo 模式不需要額外停頓 */
+                    if(!isTurboMode) await wait(100);
 
                     colDiv.innerHTML = ''; 
                     targetSyms.forEach((type, r) => {
                         let el = createSymbol(type); el.setAttribute('data-row', r);
-                        el.style.animation = 'landBounce 0.3s ease-out'; colDiv.appendChild(el);
+                        // ★ V13.92: Turbo Mode 移除落地回彈動畫，直接顯示 ★
+                        if(!isTurboMode) {
+                             el.style.animation = 'landBounce 0.3s ease-out'; 
+                        }
+                        colDiv.appendChild(el);
                     });
                     
                     resolve();
@@ -1423,7 +1473,9 @@
             await Promise.all(spinPromises);
             
             isBuyingFeature = false;
-            await wait(800); 
+            // Turbo 模式縮短結算前的等待
+            let finalWait = isTurboMode ? 200 : 800;
+            await wait(finalWait); 
             checkLogic();
         }
 
@@ -1519,7 +1571,15 @@
                 await wait(2000); 
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = getSymbolEl(c, r);
-                    if(el) { el.classList.remove('anim-win'); el.classList.remove('active'); el.classList.add('anim-explode'); }
+                    if(el) { 
+                         /* ★ V13.90: 爆炸特效邏輯 ★ */
+                        el.classList.remove('anim-win'); 
+                        el.classList.remove('active'); 
+                        el.classList.add('anim-explode'); 
+                        let boom = document.createElement('div');
+                        boom.className = 'vfx-explosion';
+                        el.appendChild(boom);
+                    }
                 });
                 await wait(400); 
                 
@@ -1812,3 +1872,4 @@
     </script>
 </body>
 </html>
+}
