@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> Dragon's Treasure(V13.105)</title>
+    <title> Dragon's Treasure(V13.106)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -839,7 +839,7 @@
             
             /* --- 特殊符號 --- */
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 5.0, inBase: true, inFree: true }, 
+            11: { type: 'scatter', weight: 4.2, inBase: true, inFree: true }, 
             
             /* --- 龍眼倍數 --- */
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
@@ -855,7 +855,6 @@
         let isBuyingFeature = false; 
         let buyTriggerType = 0; 
         let firstInteraction = false;
-        let lastSpinWasBuy = false;
         
         let isAutoPlay = false;
         
@@ -878,54 +877,61 @@
         }
         initBasePool(); 
 
-        /* ★ V13.121: RTP 90% 調教版 (WILD 權重提升至 10) ★ */
+        /* ★ V13.120: 權重平衡 (No Trash, More Multipliers) ★ */
         function updateFreeGameWeights(scatterCount) {
-    poolFree = [];
-    totalWeightFree = 0;
-    
-    const symbolQuota = 600; 
-    const multiplierQuota = 400; 
+            poolFree = [];
+            totalWeightFree = 0;
+            
+            // ★ 修改：稍微減少符號總額 (600 -> 550)，增加倍數總額 (400 -> 450)
+            // 這樣倍數出現率接近 45%，能有效阻斷連線
+            const symbolQuota = 600; 
+            const multiplierQuota = 400; 
 
-    let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-    
-    // ★ 核心分支邏輯：如果是買的(lastSpinWasBuy為真)，WILD權重給10；自然玩給2
-    let wildWeight = lastSpinWasBuy ? 10 : 2; 
+            // 嚴格遵守：只留 1~5 (High/Mid) 和 10, 11
+            let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
+            
+            let ratios = {
+                1: 4,   // 紅龍極稀有
+                2: 8,
+                3: 12,
+                4: 80,  // 版面主力
+                5: 80,  // 版面主力
+                10: 4,  // ★ 關鍵：Wild 再降一點 (5->3)，這是控制 RTP 的殺手鐧
+                11: 2   
+            };
 
-    let ratios = {
-        1: 4,   
-        2: 8,
-        3: 12,
-        4: 80,  
-        5: 80,  
-        10: wildWeight, // ★ 這裡使用動態變數
-        11: 2   
-    };
+            let ratioSum = 0;
+            for(let id in ratios) ratioSum += ratios[id];
 
-    let ratioSum = 0;
-    for(let id in ratios) ratioSum += ratios[id];
+            connectableSymbols.forEach(id => {
+                let w = (ratios[id] / ratioSum) * symbolQuota;
+                if (scatterCount === 3 && id === 10) w *= 1.2; 
+                poolFree.push({ id: id, weight: w });
+                totalWeightFree += w;
+            });
 
-    connectableSymbols.forEach(id => {
-        let w = (ratios[id] / ratioSum) * symbolQuota;
-        if (scatterCount === 3 && id === 10) w *= 1.2; 
-        poolFree.push({ id: id, weight: w });
-        totalWeightFree += w;
-    });
+            // 倍數分配 (大量 x2 當作路障)
+            let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
+            
+            if (scatterCount === 3) {
+                w2 = multiplierQuota * 0.92; // 絕大多數是 x2
+                w10 = multiplierQuota * 0.08;
+            } else if (scatterCount === 4) {
+                w2 = multiplierQuota * 0.70; 
+                w10 = multiplierQuota * 0.28; 
+                w25 = multiplierQuota * 0.02;
+            } else {
+                w2 = multiplierQuota * 0.50; 
+                w10 = multiplierQuota * 0.40; 
+                w25 = multiplierQuota * 0.09; 
+                w100 = multiplierQuota * 0.01; 
+            }
 
-    // 倍數分配 (維持不變)
-    let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
-    if (scatterCount === 3) {
-        w2 = multiplierQuota * 0.92; w10 = multiplierQuota * 0.08;
-    } else if (scatterCount === 4) {
-        w2 = multiplierQuota * 0.70; w10 = multiplierQuota * 0.28; w25 = multiplierQuota * 0.02;
-    } else {
-        w2 = multiplierQuota * 0.50; w10 = multiplierQuota * 0.40; w25 = multiplierQuota * 0.09; w100 = multiplierQuota * 0.01; 
-    }
-
-    if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
-    if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
-    if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
-    if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
-}
+            if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
+            if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
+            if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
+            if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
+        }
 
         let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
         let gridData = []; let isSpinning = false; let score = 0; 
@@ -1119,14 +1125,22 @@
             const displayPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
             
             for(let c=0; c<config.cols; c++) {
-                const colDiv = document.getElementById(`col-${c}`); 
-                gridData[c] = []; 
-                colDiv.innerHTML = '';
-                
-                for(let r=0; r<config.rows; r++) {
-                    // 使用 Math.random() 平均隨機從池中選一個，讓高分符號和特殊符號更容易露臉
-                    let randIndex = Math.floor(Math.random() * displayPool.length);
-                    let type = displayPool[randIndex];
+    const colDiv = document.getElementById(`col-${c}`); 
+    gridData[c] = []; 
+    colDiv.innerHTML = '';
+    
+    for(let r=0; r<config.rows; r++) {
+        let type;
+        // ★ 強制迴圈重抽，直到符合規則
+        while(true) {
+            let randIndex = Math.floor(Math.random() * displayPool.length);
+            type = displayPool[randIndex];
+            
+            // 規則：第 1 軸 (c===0) 不能有 WILD (10)
+            if (c === 0 && type === 10) continue; 
+            
+            break;
+        }
                     
                     gridData[c].push(type);
                     
@@ -1383,22 +1397,10 @@
 
         function fillRandom(animate) {
             for(let c=0; c<config.cols; c++) {
-    const colDiv = document.getElementById(`col-${c}`); 
-    gridData[c] = []; 
-    colDiv.innerHTML = '';
-    
-    for(let r=0; r<config.rows; r++) {
-        let type;
-        // ★ 強制迴圈重抽，直到符合規則
-        while(true) {
-            let randIndex = Math.floor(Math.random() * displayPool.length);
-            type = displayPool[randIndex];
-            
-            // 規則：第 1 軸 (c===0) 不能有 WILD (10)
-            if (c === 0 && type === 10) continue; 
-            
-            break;
-        } 
+                const colDiv = document.getElementById(`col-${c}`); gridData[c] = []; colDiv.innerHTML = '';
+                for(let r=0; r<config.rows; r++) {
+                    let type = getWeightedSymbol();
+                    if (!type) type = 1; 
                     gridData[c].push(type);
                     let el = createSymbol(type); el.setAttribute('data-row', r);
                     if(animate) { el.style.animation = `landBounce 0.4s ease-out forwards`; el.style.animationDelay = `${c*0.1 + r*0.05}s`; }
@@ -1457,19 +1459,29 @@
 
                 for(let r=0; r<config.rows; r++) {
     let type;
-    // ★ 加入 while 迴圈確保第 1 軸無 WILD
-    while(true) {
-        let randIndex = Math.floor(Math.random() * displayPool.length);
-        type = displayPool[randIndex];
-        
-        // 規則：第 1 軸 (c===0) 不能有 WILD (10)
-        if (c === 0 && type === 10) continue; 
-        
-        break; // 符合所有規則，跳出
+    if (forcedScatterRows.has(r)) {
+        type = 11;
+    } else {
+        // ★ 使用 while 迴圈確保抽出的符號合規
+        while(true) {
+            type = getWeightedSymbol();
+            
+            // [規則1] 第 1 軸 (c===0) 絕對不能出現 WILD (10)
+            if (c === 0 && type === 10) continue;
+
+            // [規則2] FG 模式下，每軸只能有 1 顆 Wild (原本的邏輯)
+            if (gameData.isFreeGame && type === 10) {
+                if (hasWildInCol) {
+                    continue; // 這一軸已經有 Wild 了，重抽
+                }
+                hasWildInCol = true; // 標記這一軸已有 Wild
+            }
+            
+            break; // 符合所有規則，跳出
         }
     }
-    finalGridData[c].push(type);
-}
+                    finalGridData[c].push(type);
+                }
             }
 
             const spinPromises = [];
@@ -1533,11 +1545,9 @@
                 spinPromises.push(p);
             }
             await Promise.all(spinPromises);
-
-lastSpinWasBuy = isBuyingFeature; // ★ 在重置前，先記住這把是不是買的！
-isBuyingFeature = false; 
-
-let finalWait = isTurboMode ? 200 : 800;
+            
+            isBuyingFeature = false;
+            let finalWait = isTurboMode ? 200 : 800;
             await wait(finalWait); 
             checkLogic();
         }
@@ -1593,22 +1603,6 @@ let finalWait = isTurboMode ? 200 : 800;
 
                 // 3. 結算該符號獎金
                 if(consecutiveCols >= 3) {
-                    // [FIX START] 防止純 WILD 連線重複領取多個符號的獎金
-    let allWilds = true;
-    for(let coord of tempMatches) {
-        let [mc, mr] = coord.split(',').map(Number);
-        if (mc < consecutiveCols) { 
-            if (gridData[mc][mr] !== 10) {
-                allWilds = false;
-                break;
-            }
-        }
-    }
-    // 如果是全 WILD 連線，且現在算的不是 1 號 (最高分符號)，就跳過不給錢！
-    if (allWilds && targetId !== 1) {
-        continue; 
-    }
-    // [FIX END]
                     let payout = SYMBOLS[targetId].payouts[consecutiveCols];
                     if(payout) {
                         // ★ 修正獎金公式：賠率 * 單注(bet/20) * 路數(Ways)
@@ -1773,9 +1767,8 @@ let finalWait = isTurboMode ? 200 : 800;
                     let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
                     colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
                 });
-                let hasWildInCol = survivors.some(item => item.type === 10);
-
-for(let k=0; k<missing; k++) {
+                let missing = config.rows - survivors.length;
+                for(let k=0; k<missing; k++) {
     let type;
     while(true) {
         type = getWeightedSymbol();
