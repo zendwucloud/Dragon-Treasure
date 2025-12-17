@@ -1603,6 +1603,23 @@
 
                 // 3. 結算該符號獎金
                 if(consecutiveCols >= 3) {
+
+    /* ====== [插入這段] 開始 ====== */
+    // 防止純 WILD 連線重複領取多個符號的獎金
+    let allWilds = true;
+    for(let coord of tempMatches) {
+        let [mc, mr] = coord.split(',').map(Number);
+        if (mc < consecutiveCols) { 
+            if (gridData[mc][mr] !== 10) {
+                allWilds = false;
+                break;
+            }
+        }
+    }
+    // 如果是全 WILD 連線，且現在算的不是 1 號 (最高分符號)，就跳過不給錢！
+    if (allWilds && targetId !== 1) {
+        continue; 
+    }
                     let payout = SYMBOLS[targetId].payouts[consecutiveCols];
                     if(payout) {
                         // ★ 修正獎金公式：賠率 * 單注(bet/20) * 路數(Ways)
