@@ -522,7 +522,7 @@
             <div class="buy-box">
                 <div class="info-title" style="color: #ffd700;">購買特色遊戲</div>
                 <div style="color: #fff; margin: 20px 0; font-size: 2vh; line-height: 1.5;">
-                    確定要花費 <span id="buy-price-text" style="color: #00ffff;">10,000</span> 購買嗎？<br>
+                    確定要花費 <span id="buy-price-text" style="color: #00ffff;">15,000</span> 購買嗎？<br>
                     <span style="font-size: 1.5vh; color: #aaa;">(必定觸發免費遊戲)</span>
                 </div>
                 <div class="buy-actions">
@@ -814,28 +814,34 @@
     <script>
         const config = { cols: 5, rows: 3 }; 
         
-        /* ★ V13.111: 平衡版賠率 (提高賠率以修復 243 Ways 的 MG RTP) ★ */
+        /* ★ V13.120: 最終修正版 (FG無爛牌 + 賠率80% + 倍數路障) ★ */
         const SYMBOLS = {
-            /* 高分符號：賠率顯著提升，讓 5 連線有大獎感 */
-            1:  { type: 'high', payouts: {3: 10, 4: 50, 5: 200}, weight: 8, inBase: true, inFree: true }, 
-            2:  { type: 'high', payouts: {3: 8,  4: 40, 5: 150}, weight: 10, inBase: true, inFree: true },
-            3:  { type: 'high', payouts: {3: 5,  4: 25, 5: 100}, weight: 12, inBase: true, inFree: true },
+            /* --- 高分符號 (依據圖片數值再打8折) --- */
+            /* 原本 100 -> 80 */
+            1:  { type: 'high', payouts: {3: 4.0, 4: 20.0, 5: 80.0}, weight: 2.5, inBase: true, inFree: true },
+            /* 原本 75 -> 60 */
+            2:  { type: 'high', payouts: {3: 3.2, 4: 16.0, 5: 60.0}, weight: 4.0, inBase: true, inFree: true },
+            /* 原本 50 -> 40 */
+            3:  { type: 'high', payouts: {3: 2.0, 4: 10.0, 5: 40.0}, weight: 5.5, inBase: true, inFree: true },
             
-            /* 中分符號 */
-            4:  { type: 'mid',  payouts: {3: 3,  4: 15, 5: 50},  weight: 20, inBase: true, inFree: true },
-            5:  { type: 'mid',  payouts: {3: 3,  4: 15, 5: 50},  weight: 20, inBase: true, inFree: true },
+            /* --- 中分符號 (打8折) --- */
+            /* 原本 25 -> 20 */
+            4:  { type: 'mid',  payouts: {3: 1.2, 4: 6.0,  5: 20.0}, weight: 12, inBase: true, inFree: true },
+            /* 原本 25 -> 20 */
+            5:  { type: 'mid',  payouts: {3: 1.2, 4: 6.0,  5: 20.0}, weight: 12, inBase: true, inFree: true },
             
-            /* 低分符號：權重稍微降低 (45/55)，賠率微調以防太咬 */
-            6:  { type: 'low',  payouts: {3: 1,  4: 5,  5: 20},  weight: 45, inBase: true, inFree: false },
-            7:  { type: 'low',  payouts: {3: 1,  4: 5,  5: 20},  weight: 45, inBase: true, inFree: false },
-            8:  { type: 'low',  payouts: {3: 0.5, 4: 3, 5: 10},  weight: 55, inBase: true, inFree: false },
-            9:  { type: 'low',  payouts: {3: 0.5, 4: 3, 5: 10},  weight: 55, inBase: true, inFree: false },
+            /* --- 低分符號 (FG 模式將被移除) --- */
+            /* 低分符號維持原樣或微調，因為 FG 不會出現，對 FG RTP 無影響 */
+            6:  { type: 'low',  payouts: {3: 0.5, 4: 2.5, 5: 10},  weight: 65, inBase: true, inFree: false },
+            7:  { type: 'low',  payouts: {3: 0.5, 4: 2.5, 5: 10},  weight: 65, inBase: true, inFree: false },
+            8:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
+            9:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             
-            /* Wild & Scatter */
-            10: { type: 'wild', weight: 14, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 5.5, inBase: true, inFree: true }, 
+            /* --- 特殊符號 --- */
+            10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
+            11: { type: 'scatter', weight: 4.2, inBase: true, inFree: true }, 
             
-            /* 龍眼倍數 (權重設為0，由 updateFreeGameWeights 動態控制) */
+            /* --- 龍眼倍數 --- */
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -871,57 +877,54 @@
         }
         initBasePool(); 
 
-        /* ★ V13.111: 平衡版 FG 權重 (配合高賠率表，降低 FG 高分符號與倍數出現率) ★ */
+        /* ★ V13.120: 權重平衡 (No Trash, More Multipliers) ★ */
         function updateFreeGameWeights(scatterCount) {
             poolFree = [];
             totalWeightFree = 0;
-            const symbolQuota = 750; 
-            const multiplierQuota = 250; 
+            
+            // ★ 修改：稍微減少符號總額 (600 -> 550)，增加倍數總額 (400 -> 450)
+            // 這樣倍數出現率接近 45%，能有效阻斷連線
+            const symbolQuota = 600; 
+            const multiplierQuota = 400; 
 
-            // 1. 設定 FG 符號權重 (壓低高分符號出現率)
+            // 嚴格遵守：只留 1~5 (High/Mid) 和 10, 11
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
             
-            // 手動設定相對比例 (數字越小越難出)
             let ratios = {
-                1: 8,   // 紅龍 (賠率200，必須非常難出)
-                2: 12,
-                3: 15,
-                4: 50,  // 中分符號可以多一點
-                5: 50,
-                10: 12, // Wild 也要控制，避免輕易全盤
-                11: 2   // Scatter 在 FG 裡很難再中 (Retrigger)
+                1: 4,   // 紅龍極稀有
+                2: 8,
+                3: 12,
+                4: 80,  // 版面主力
+                5: 80,  // 版面主力
+                10: 4,  // ★ 關鍵：Wild 再降一點 (5->3)，這是控制 RTP 的殺手鐧
+                11: 2   
             };
 
             let ratioSum = 0;
             for(let id in ratios) ratioSum += ratios[id];
 
-            // 根據比例分配 symbolQuota
             connectableSymbols.forEach(id => {
                 let w = (ratios[id] / ratioSum) * symbolQuota;
-                // 特殊加成
                 if (scatterCount === 3 && id === 10) w *= 1.2; 
                 poolFree.push({ id: id, weight: w });
                 totalWeightFree += w;
             });
 
-            // 2. 設定龍眼倍數權重 (嚴格控制高倍數)
+            // 倍數分配 (大量 x2 當作路障)
             let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
             
             if (scatterCount === 3) {
-                // 5局: 主要是 x2
-                w2 = multiplierQuota * 0.95; 
-                w10 = multiplierQuota * 0.05;
+                w2 = multiplierQuota * 0.92; // 絕大多數是 x2
+                w10 = multiplierQuota * 0.08;
             } else if (scatterCount === 4) {
-                // 10局: 混和 x2, x10
                 w2 = multiplierQuota * 0.70; 
                 w10 = multiplierQuota * 0.28; 
                 w25 = multiplierQuota * 0.02;
             } else {
-                // 15局: 才有機會看到 x100，但機率極低
                 w2 = multiplierQuota * 0.50; 
                 w10 = multiplierQuota * 0.40; 
                 w25 = multiplierQuota * 0.09; 
-                w100 = multiplierQuota * 0.01; // 1% 機率出現 x100
+                w100 = multiplierQuota * 0.01; 
             }
 
             if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
@@ -1267,8 +1270,8 @@
         // 修改後的開啟視窗函式
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
-            /* ★ V13.86: 修正為 100倍 ★ */
-            const buyCost = gameData.bet * 100;
+            /* ★ V13.86: 修正為 150倍 ★ */
+            const buyCost = gameData.bet * 150;
             if (gameData.credit < buyCost) { 
                 alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); 
                 return; 
@@ -1279,8 +1282,8 @@
 
         // 真正的購買執行函式 (由 "確定購買" 按鈕觸發)
         async function executeBuy() {
-            /* ★ V13.86: 修正為 100倍 ★ */
-            const buyCost = gameData.bet * 100;
+            /* ★ V13.105: 修正為 150倍 ★ */
+            const buyCost = gameData.bet * 150;
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
@@ -1411,8 +1414,6 @@
             if (!isAutoPlay) AudioMgr.playSFX('spin'); 
 
             document.getElementById('spin-icon').classList.add('fast');
-
-            /* ★ V13.91: 每次旋轉開始時，重置急停標記 ★ */
             isQuickStop = false;
 
             const msgBar = document.getElementById('ui-message-bar');
@@ -1421,7 +1422,6 @@
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
                 if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
-                /* ★ V13.85: 重置倍數 (不累加模式) ★ */
                 gameData.accumulatedMultiplier = 0; 
                 resetMultiplierUI(); 
                 gameData.currentWin = 0;
@@ -1432,10 +1432,47 @@
             
             score = 0; updateAllUI(); 
 
+            /* ★ V13.116: 預先生成結果 (每軸限 1 顆 WILD) ★ */
+            let finalGridData = []; 
+
+            for(let c=0; c<config.cols; c++) {
+                finalGridData[c] = [];
+                let hasWildInCol = false; // ★ 標記：這一軸是否已經有 Wild 了
+
+                // 處理購買特色遊戲的強制 Scatter
+                let forcedScatterRows = new Set();
+                if (isBuyingFeature) {
+                    let hasScatter = false;
+                    if (buyTriggerType === 3) hasScatter = (c === 0 || c === 2 || c === 4);
+                    else if (buyTriggerType === 4) hasScatter = (c !== 2); 
+                    else if (buyTriggerType === 5) hasScatter = true;
+                    if (hasScatter) forcedScatterRows.add(Math.floor(Math.random() * config.rows));
+                }
+
+                for(let r=0; r<config.rows; r++) {
+                    let type;
+                    if (forcedScatterRows.has(r)) {
+                        type = 11;
+                    } else {
+                        type = getWeightedSymbol();
+                        
+                        // ★ 限制規則: FG 模式下，每軸只能有 1 顆 Wild ★
+                        if (gameData.isFreeGame && type === 10) {
+                            if (hasWildInCol) {
+                                // 這一軸已經有 Wild 了，強制重抽直到不是 Wild
+                                while (type === 10) { type = getWeightedSymbol(); }
+                            } else {
+                                hasWildInCol = true; // 標記這一軸已有 Wild
+                            }
+                        }
+                    }
+                    finalGridData[c].push(type);
+                }
+            }
+
             const spinPromises = [];
             for(let c=0; c<config.cols; c++) {
                 const p = new Promise(async (resolve) => {
-                    /* ★ V13.92: 如果是 Turbo Mode，延遲歸零，否則依序啟動 ★ */
                     let delay = isTurboMode ? 0 : c * 300;
                     await wait(delay); 
                     
@@ -1448,34 +1485,8 @@
                         fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
                     } 
                     
-                    let targetSyms = [];
-                    if (isBuyingFeature) {
-                        let hasScatter = false;
-                        if (buyTriggerType === 3) hasScatter = (c === 0 || c === 2 || c === 4);
-                        else if (buyTriggerType === 4) hasScatter = (c !== 2); 
-                        else if (buyTriggerType === 5) hasScatter = true;
-
-                        if (hasScatter) {
-                            let scatterPos = Math.floor(Math.random() * 3);
-                            for(let r=0; r<config.rows; r++) {
-                                if (r === scatterPos) targetSyms.push(11); 
-                                else {
-                                    let s = getWeightedSymbol();
-                                    while(s === 11) s = getWeightedSymbol();
-                                    targetSyms.push(s);
-                                }
-                            }
-                        } else {
-                            for(let r=0; r<config.rows; r++) {
-                                let s = getWeightedSymbol();
-                                while(s === 11) s = getWeightedSymbol();
-                                targetSyms.push(s);
-                            }
-                        }
-                    } else {
-                        for(let r=0; r<config.rows; r++) { targetSyms.push(getWeightedSymbol()); }
-                    }
-                    
+                    // 使用預先生成的結果
+                    let targetSyms = finalGridData[c];
                     gridData[c] = targetSyms;
 
                     let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
@@ -1498,30 +1509,20 @@
                     stripDiv.classList.add('moving');
                     stripDiv.style.transform = `translateY(${movePct}%)`;
                     
-                    /* ★ V13.92: 如果是 Turbo Mode，強制縮短動畫時間為 1000ms ★ */
                     let spinTime = isTurboMode ? 1000 : 2000;
-                    if(isTurboMode) {
-                        stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-                    } else {
-                        stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-                    }
+                    if(isTurboMode) stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                    else stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
 
                     await wait(spinTime); 
                     
-                    /* ★ V13.91: 急停後強制移除動畫 ★ */
                     stripDiv.style.transition = 'none';
-
                     AudioMgr.playSFX('stop');
-                    /* Turbo 模式不需要額外停頓 */
                     if(!isTurboMode) await wait(100);
 
                     colDiv.innerHTML = ''; 
                     targetSyms.forEach((type, r) => {
                         let el = createSymbol(type); el.setAttribute('data-row', r);
-                        // ★ V13.92: Turbo Mode 移除落地回彈動畫，直接顯示 ★
-                        if(!isTurboMode && !isQuickStop) {
-                             el.style.animation = 'landBounce 0.3s ease-out'; 
-                        }
+                        if(!isTurboMode && !isQuickStop) el.style.animation = 'landBounce 0.3s ease-out'; 
                         colDiv.appendChild(el);
                     });
                     
@@ -1532,7 +1533,6 @@
             await Promise.all(spinPromises);
             
             isBuyingFeature = false;
-            // Turbo 模式縮短結算前的等待
             let finalWait = isTurboMode ? 200 : 800;
             await wait(finalWait); 
             checkLogic();
