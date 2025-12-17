@@ -1383,10 +1383,22 @@
 
         function fillRandom(animate) {
             for(let c=0; c<config.cols; c++) {
-                const colDiv = document.getElementById(`col-${c}`); gridData[c] = []; colDiv.innerHTML = '';
-                for(let r=0; r<config.rows; r++) {
-                    let type = getWeightedSymbol();
-                    if (!type) type = 1; 
+    const colDiv = document.getElementById(`col-${c}`); 
+    gridData[c] = []; 
+    colDiv.innerHTML = '';
+    
+    for(let r=0; r<config.rows; r++) {
+        let type;
+        // ★ 強制迴圈重抽，直到符合規則
+        while(true) {
+            let randIndex = Math.floor(Math.random() * displayPool.length);
+            type = displayPool[randIndex];
+            
+            // 規則：第 1 軸 (c===0) 不能有 WILD (10)
+            if (c === 0 && type === 10) continue; 
+            
+            break;
+        } 
                     gridData[c].push(type);
                     let el = createSymbol(type); el.setAttribute('data-row', r);
                     if(animate) { el.style.animation = `landBounce 0.4s ease-out forwards`; el.style.animationDelay = `${c*0.1 + r*0.05}s`; }
@@ -1444,24 +1456,20 @@
                 }
 
                 for(let r=0; r<config.rows; r++) {
-                    let type;
-                    if (forcedScatterRows.has(r)) {
-                        type = 11;
-                    } else {
-                        type = getWeightedSymbol();
-                        
-                        // ★ 限制規則: FG 模式下，每軸只能有 1 顆 Wild ★
-                        if (gameData.isFreeGame && type === 10) {
-                            if (hasWildInCol) {
-                                // 這一軸已經有 Wild 了，強制重抽直到不是 Wild
-                                while (type === 10) { type = getWeightedSymbol(); }
-                            } else {
-                                hasWildInCol = true; // 標記這一軸已有 Wild
-                            }
-                        }
-                    }
-                    finalGridData[c].push(type);
-                }
+    let type;
+    // ★ 加入 while 迴圈確保第 1 軸無 WILD
+    while(true) {
+        let randIndex = Math.floor(Math.random() * displayPool.length);
+        type = displayPool[randIndex];
+        
+        // 規則：第 1 軸 (c===0) 不能有 WILD (10)
+        if (c === 0 && type === 10) continue; 
+        
+        break; // 符合所有規則，跳出
+        }
+    }
+    finalGridData[c].push(type);
+}
             }
 
             const spinPromises = [];
@@ -1585,6 +1593,22 @@ let finalWait = isTurboMode ? 200 : 800;
 
                 // 3. 結算該符號獎金
                 if(consecutiveCols >= 3) {
+                    // [FIX START] 防止純 WILD 連線重複領取多個符號的獎金
+    let allWilds = true;
+    for(let coord of tempMatches) {
+        let [mc, mr] = coord.split(',').map(Number);
+        if (mc < consecutiveCols) { 
+            if (gridData[mc][mr] !== 10) {
+                allWilds = false;
+                break;
+            }
+        }
+    }
+    // 如果是全 WILD 連線，且現在算的不是 1 號 (最高分符號)，就跳過不給錢！
+    if (allWilds && targetId !== 1) {
+        continue; 
+    }
+    // [FIX END]
                     let payout = SYMBOLS[targetId].payouts[consecutiveCols];
                     if(payout) {
                         // ★ 修正獎金公式：賠率 * 單注(bet/20) * 路數(Ways)
@@ -1749,10 +1773,24 @@ let finalWait = isTurboMode ? 200 : 800;
                     let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
                     colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
                 });
-                let missing = config.rows - survivors.length;
-                for(let k=0; k<missing; k++) {
-                    let type = getWeightedSymbol();
-                    if (!type) type = 1;
+                let hasWildInCol = survivors.some(item => item.type === 10);
+
+for(let k=0; k<missing; k++) {
+    let type;
+    while(true) {
+        type = getWeightedSymbol();
+        if (!type) type = 1;
+
+        // [規則1] 第 1 軸 (c===0) 掉落時也不能有 WILD
+        if (c === 0 && type === 10) continue;
+        
+        // [規則2] FG 模式限 1 顆 Wild (原本的邏輯)
+        if (gameData.isFreeGame && type === 10) {
+            if (hasWildInCol) continue; 
+            hasWildInCol = true; 
+        }
+        break; 
+    }
                     newColData.push(type);
                     let el = createSymbol(type); let newR = survivors.length + k;
                     el.setAttribute('data-row', newR);
