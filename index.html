@@ -839,7 +839,7 @@
             
             /* --- 特殊符號 --- */
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 4.2, inBase: true, inFree: true }, 
+            11: { type: 'scatter', weight: 5.8, inBase: true, inFree: true }, 
             
             /* --- 龍眼倍數 --- */
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
@@ -855,6 +855,7 @@
         let isBuyingFeature = false; 
         let buyTriggerType = 0; 
         let firstInteraction = false;
+        let lastSpinWasBuy = false;
         
         let isAutoPlay = false;
         
@@ -879,59 +880,52 @@
 
         /* ★ V13.121: RTP 90% 調教版 (WILD 權重提升至 10) ★ */
         function updateFreeGameWeights(scatterCount) {
-            poolFree = [];
-            totalWeightFree = 0;
-            
-            // 這些參數保持不變
-            const symbolQuota = 600; 
-            const multiplierQuota = 400; 
+    poolFree = [];
+    totalWeightFree = 0;
+    
+    const symbolQuota = 600; 
+    const multiplierQuota = 400; 
 
-            let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            
-            let ratios = {
-                1: 4,   
-                2: 8,
-                3: 12,
-                4: 80,  
-                5: 80,  
-                10: 10, // ★ 修改：從 5 提升到 10 (達成 RTP 90% 的關鍵)
-                11: 2   
-            };
+    let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
+    
+    // ★ 核心分支邏輯：如果是買的(lastSpinWasBuy為真)，WILD權重給10；自然玩給2
+    let wildWeight = lastSpinWasBuy ? 10 : 2; 
 
-            // ... (下方程式碼保持不變)
+    let ratios = {
+        1: 4,   
+        2: 8,
+        3: 12,
+        4: 80,  
+        5: 80,  
+        10: wildWeight, // ★ 這裡使用動態變數
+        11: 2   
+    };
 
-            let ratioSum = 0;
-            for(let id in ratios) ratioSum += ratios[id];
+    let ratioSum = 0;
+    for(let id in ratios) ratioSum += ratios[id];
 
-            connectableSymbols.forEach(id => {
-                let w = (ratios[id] / ratioSum) * symbolQuota;
-                if (scatterCount === 3 && id === 10) w *= 1.2; 
-                poolFree.push({ id: id, weight: w });
-                totalWeightFree += w;
-            });
+    connectableSymbols.forEach(id => {
+        let w = (ratios[id] / ratioSum) * symbolQuota;
+        if (scatterCount === 3 && id === 10) w *= 1.2; 
+        poolFree.push({ id: id, weight: w });
+        totalWeightFree += w;
+    });
 
-            // 倍數分配 (大量 x2 當作路障)
-            let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
-            
-            if (scatterCount === 3) {
-                w2 = multiplierQuota * 0.92; // 絕大多數是 x2
-                w10 = multiplierQuota * 0.08;
-            } else if (scatterCount === 4) {
-                w2 = multiplierQuota * 0.70; 
-                w10 = multiplierQuota * 0.28; 
-                w25 = multiplierQuota * 0.02;
-            } else {
-                w2 = multiplierQuota * 0.50; 
-                w10 = multiplierQuota * 0.40; 
-                w25 = multiplierQuota * 0.09; 
-                w100 = multiplierQuota * 0.01; 
-            }
+    // 倍數分配 (維持不變)
+    let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
+    if (scatterCount === 3) {
+        w2 = multiplierQuota * 0.92; w10 = multiplierQuota * 0.08;
+    } else if (scatterCount === 4) {
+        w2 = multiplierQuota * 0.70; w10 = multiplierQuota * 0.28; w25 = multiplierQuota * 0.02;
+    } else {
+        w2 = multiplierQuota * 0.50; w10 = multiplierQuota * 0.40; w25 = multiplierQuota * 0.09; w100 = multiplierQuota * 0.01; 
+    }
 
-            if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
-            if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
-            if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
-            if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
-        }
+    if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
+    if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
+    if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
+    if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
+}
 
         let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
         let gridData = []; let isSpinning = false; let score = 0; 
@@ -1531,9 +1525,11 @@
                 spinPromises.push(p);
             }
             await Promise.all(spinPromises);
-            
-            isBuyingFeature = false;
-            let finalWait = isTurboMode ? 200 : 800;
+
+lastSpinWasBuy = isBuyingFeature; // ★ 在重置前，先記住這把是不是買的！
+isBuyingFeature = false; 
+
+let finalWait = isTurboMode ? 200 : 800;
             await wait(finalWait); 
             checkLogic();
         }
