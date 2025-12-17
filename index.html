@@ -877,28 +877,28 @@
         }
         initBasePool(); 
 
-        /* ★ V13.120: 權重平衡 (No Trash, More Multipliers) ★ */
+        /* ★ V13.121: RTP 90% 調教版 (WILD 權重提升至 10) ★ */
         function updateFreeGameWeights(scatterCount) {
             poolFree = [];
             totalWeightFree = 0;
             
-            // ★ 修改：稍微減少符號總額 (600 -> 550)，增加倍數總額 (400 -> 450)
-            // 這樣倍數出現率接近 45%，能有效阻斷連線
+            // 這些參數保持不變
             const symbolQuota = 600; 
             const multiplierQuota = 400; 
 
-            // 嚴格遵守：只留 1~5 (High/Mid) 和 10, 11
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
             
             let ratios = {
-                1: 4,   // 紅龍極稀有
+                1: 4,   
                 2: 8,
                 3: 12,
-                4: 80,  // 版面主力
-                5: 80,  // 版面主力
-                10: 4,  // ★ 關鍵：Wild 再降一點 (5->3)，這是控制 RTP 的殺手鐧
+                4: 80,  
+                5: 80,  
+                10: 10, // ★ 修改：從 5 提升到 10 (達成 RTP 90% 的關鍵)
                 11: 2   
             };
+
+            // ... (下方程式碼保持不變)
 
             let ratioSum = 0;
             for(let id in ratios) ratioSum += ratios[id];
