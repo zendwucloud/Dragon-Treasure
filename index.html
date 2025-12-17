@@ -1784,8 +1784,11 @@
                     let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
                     colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
                 });
-                let missing = config.rows - survivors.length;
-                for(let k=0; k<missing; k++) {
+
+                let hasWildInCol = survivors.some(item => item.type === 10);
+
+let missing = config.rows - survivors.length;
+for(let k=0; k<missing; k++) {
     let type;
     while(true) {
         type = getWeightedSymbol();
@@ -1794,7 +1797,7 @@
         // [規則1] 第 1 軸 (c===0) 掉落時也不能有 WILD
         if (c === 0 && type === 10) continue;
         
-        // [規則2] FG 模式限 1 顆 Wild (原本的邏輯)
+        // [規則2] FG 模式限 1 顆 Wild
         if (gameData.isFreeGame && type === 10) {
             if (hasWildInCol) continue; 
             hasWildInCol = true; 
