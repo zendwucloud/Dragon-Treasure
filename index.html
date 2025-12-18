@@ -147,7 +147,7 @@
         /* --- Canvas 金幣層 (Level 2) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2600; 
+            z-index: 2900; /* ★ 修改：原本 2600 改為 2900 (比 FG視窗 2700 高) */
             pointer-events: none; 
         }
 
@@ -744,7 +744,7 @@
     </script>
 
     <script>
-        /* ★ V13.121: 升級版 CoinManager (支援指定發射位置) ★ */
+        /* ★ V13.125: 修復版 CoinManager (支援指定數量與參數) ★ */
     const CoinManager = {
         canvas: null, ctx: null, particles: [], isRunning: false,
         coinImg: new Image(), imgLoaded: false,
@@ -765,25 +765,32 @@
             }
         },
 
-        // 新增 originX 參數：0.5=中間, 0.1=左邊, 0.9=右邊
+        // originX: 0.5=中間, 0.1=左邊, 0.9=右邊
         fire: function(amount, originX = 0.5) {
-            let count = 20; 
+            // ★ 修正：解鎖數量限制，使用傳入的 amount
+            let count = amount || 20; 
+            
             if (!this.isRunning) { this.isRunning = true; this.animate(); }
-            for (let i = 0; i < count; i++) this.particles.push(this.createParticle('coin', originX));
-            for (let i = 0; i < 5; i++) this.particles.push(this.createParticle('sparkle', originX));
+            
+            for (let i = 0; i < count; i++) {
+                this.particles.push(this.createParticle('coin', originX));
+            }
+            // 隨機加一點閃光粒子
+            for (let i = 0; i < 5; i++) {
+                this.particles.push(this.createParticle('sparkle', originX));
+            }
         },
 
         createParticle: function(type, originX) {
             const w = this.canvas.width; const h = this.canvas.height;
-            const startX = w * originX; // 根據參數決定發射點
+            const startX = w * originX; 
             
             if (type === 'coin') {
                 return {
                     type: 'coin',
                     x: startX, y: h + 50, 
-                    // 讓噴射方向稍微往中間偏
                     vx: (Math.random() - 0.5 + (0.5 - originX)) * (w * 0.04), 
-                    vy: -(Math.random() * h * 0.03 + h * 0.02), // 噴高一點
+                    vy: -(Math.random() * h * 0.03 + h * 0.02), 
                     gravity: h * 0.0006,
                     size: (Math.random() * 30 + 30) * (w / 720) * 3, 
                     rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 10,
@@ -1994,81 +2001,118 @@ for(let k=0; k<missing; k++) {
             const scoreEl = document.getElementById('fg-end-score');
             const finalWin = gameData.currentWin;
 
-            // ★ 分級判斷 (包含 0 分處理)
-            let tier = -1; // 預設 -1 (0分)
-            
-            if (finalWin >= 200000) tier = 4;      // [帝王級]
-            else if (finalWin >= 150000) tier = 3; // [大獎級]
-            else if (finalWin >= 100000) tier = 2; // [中獎級]
-            else if (finalWin >= 50000) tier = 1;  // [小獎級]
-            else if (finalWin > 0) tier = 0;       // [安慰獎]
-            else tier = -1;                        // [槓龜] 0分：不做任何標記，但視窗照樣開
+            // 確保另一個視窗是關閉的
+            const maxModal = document.getElementById('max-win-modal');
+            if(maxModal) maxModal.classList.remove('active');
 
-            /* --- 1. 介面開啟 (0分照樣執行) --- */
+            // ★ 定義 6 個階層
+            let tier = 0;
+            if (finalWin >= 200000) tier = 5;
+            else if (finalWin >= 150000) tier = 4;
+            else if (finalWin >= 100000) tier = 3;
+            else if (finalWin >= 50000) tier = 2;
+            else if (finalWin > 0) tier = 1; // 25,158 會落入這裡
+            else tier = 0;
+
+            // 1. 開啟視窗
             modal.classList.remove('fade-out');
             mask.classList.remove('fade-out');
-            
-            // ★ 關鍵：無論幾分，YOU WIN 圖片跟黑色遮罩都會出來
             modal.classList.add('active');
             mask.classList.add('active');
             
-            // ★ 音效控制：只有 > 0 分才播音效
-            if (tier >= 3) AudioMgr.playSFX('bigWin');
-            else if (tier >= 0) AudioMgr.playSFX('youWin');
-            // else { tier === -1 } -> 這裡什麼都不做，保持靜音 (沒報獎音)
+            // 2. 音效
+            if (tier === 5) { AudioMgr.playSFX('scatter'); AudioMgr.playSFX('bigWin'); } 
+            else if (tier === 4) { AudioMgr.playSFX('bigWin'); } 
+            else if (tier >= 1) { AudioMgr.playSFX('youWin'); }
 
-            /* --- 2. 特效觸發區 --- */
-
-            // 呼吸燈 & 彩帶 (高分才有)
+            // 3. 特效 (呼吸燈 & 彩帶)
             let breath = document.querySelector('.vfx-breathing');
-            if (tier === 4) { /* ... 略 ... */ }
-            if (tier >= 3) { /* ... 略 ... */ }
-
-            // ★ 噴錢控制：只有 > 0 分才噴金幣
-            let sprayer = null;
-            if (tier >= 0) { // <--- 關鍵：0分 (Tier -1) 不會進入這裡
-                let waves = 0;
-                let maxWaves = (tier === 4) ? 8 : (tier === 3) ? 6 : (tier >= 1) ? 3 : 2;
-                
-                sprayer = setInterval(() => {
-                    // ... (噴錢邏輯略) ...
-                    // 這裡的代碼維持您之前的設定 (手機減量/三管噴射等)
-                    if (tier === 4) { CoinManager.fire(150, 0.1); CoinManager.fire(150, 0.5); CoinManager.fire(150, 0.9); }
-                    else if (tier === 3) { CoinManager.fire(120, 0.1); CoinManager.fire(120, 0.9); }
-                    else if (tier === 2) { CoinManager.fire(80, 0.2); CoinManager.fire(80, 0.8); }
-                    else if (tier === 1) { CoinManager.fire(80, 0.5); }
-                    else { CoinManager.fire(30, 0.5); } // Tier 0
-
-                    waves++;
-                    if(waves >= maxWaves) clearInterval(sprayer);
-                }, 600);
+            if (tier === 5) {
+                if(!breath) {
+                    breath = document.createElement('div');
+                    breath.className = 'vfx-breathing';
+                    document.querySelector('.stage').appendChild(breath);
+                }
+                breath.classList.add('active');
             }
 
-            /* --- 3. 分數跳動與等待 --- */
-            let animDuration = (tier >= 3) ? 2500 : 1500;
-            // 0 分時，這裡會從 0 跑到 0，顯示 "0.00"
+            if (tier >= 4) {
+                let confettiCount = (tier === 5) ? 100 : 50;
+                if (typeof spawnConfetti === 'function') {
+                    for(let i=0; i<confettiCount; i++) { setTimeout(spawnConfetti, i * 20); }
+                }
+            }
+
+            // 4. ★★★ 優化後的噴錢邏輯 (即時噴發) ★★★
+            let sprayer = null;
+            if (tier >= 1) { 
+                let waves = 0;
+                let maxWaves = 0;
+                let intervalTime = 600;
+
+                if (tier === 5) maxWaves = 6;
+                else if (tier === 4) maxWaves = 3;
+                else if (tier === 3) maxWaves = 3;
+                else if (tier === 2) maxWaves = 3;
+                else maxWaves = 1; // Tier 1: 5萬以下，噴一波
+
+                // ★ 定義噴發動作
+                const doFire = () => {
+                    if (tier === 5) {
+                        CoinManager.fire(150, 0.1); CoinManager.fire(150, 0.5); CoinManager.fire(150, 0.9); 
+                    } 
+                    else if (tier === 4) {
+                        CoinManager.fire(80, 0.1); CoinManager.fire(80, 0.5); CoinManager.fire(80, 0.9); 
+                    }
+                    else if (tier === 3) {
+                        CoinManager.fire(80, 0.1); CoinManager.fire(80, 0.9);
+                    }
+                    else if (tier === 2) {
+                        CoinManager.fire(80, 0.5); 
+                    }
+                    else {
+                        // [修正] Tier 1: 加量到 50 顆
+                        CoinManager.fire(50, 0.5); 
+                    }
+                    waves++;
+                };
+
+                // ★ 關鍵：第一波立刻噴！
+                doFire();
+
+                // 如果需要噴多波，才啟動計時器
+                if (waves < maxWaves) {
+                    sprayer = setInterval(() => {
+                        doFire();
+                        if(waves >= maxWaves) clearInterval(sprayer);
+                    }, intervalTime);
+                }
+            }
+
+            // 5. 跑分
+            let animDuration = (tier >= 4) ? 2500 : (tier >= 1) ? 1500 : 1000;
             animateValue(scoreEl, 0, finalWin, animDuration);
 
-            // ★ 等待時間：0 分時給 2.5 秒 (讓玩家看著 0.00 發呆一下)
-            let waitTime = (tier >= 4) ? 7000 : (tier >= 3) ? 5500 : (tier >= 1) ? 4000 : (tier === 0) ? 3000 : 2500;
+            // 6. 等待
+            let waitTime = 0;
+            if (tier === 5) waitTime = 8000;
+            else if (tier === 4) waitTime = 6000;
+            else if (tier === 3) waitTime = 4000;
+            else if (tier === 2) waitTime = 3000;
+            else if (tier === 1) waitTime = 3000;
+            else waitTime = 2000;
+
             await wait(waitTime);
 
-            /* --- 4. 清理與結束 --- */
+            // 7. 清理
             if(sprayer) clearInterval(sprayer);
             if(breath) breath.classList.remove('active');
 
-            if(modal) {
-                modal.style.transition = 'opacity 0.5s';
-                modal.style.opacity = '0';
-            }
-            if(mask) {
-                mask.style.transition = 'opacity 0.5s';
-                mask.style.opacity = '0';
-            }
+            if(modal) { modal.style.transition = 'opacity 0.5s'; modal.style.opacity = '0'; }
+            if(mask) { mask.style.transition = 'opacity 0.5s'; mask.style.opacity = '0'; }
             
             await wait(500); 
 
-            // 復原 UI
             if(modal) { modal.classList.remove('active'); modal.style.opacity = ''; modal.style.transition = ''; }
             if(mask) { mask.classList.remove('active'); mask.style.opacity = ''; mask.style.transition = ''; }
 
