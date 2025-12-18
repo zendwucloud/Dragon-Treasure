@@ -1983,21 +1983,15 @@ for(let k=0; k<missing; k++) {
             const scoreEl = document.getElementById('fg-end-score');
             const finalWin = gameData.currentWin;
 
-            // ★ V13.123: 改用「固定金額」分級 (您要求的設定)
-            let tier = 0;
+            // ★ V13.124: 精細化金幣噴發階層 (您的新需求)
+            let tier = -1; // 預設 -1 (0分)
             
-            // 階層判斷邏輯
-            if (finalWin >= 200000) {
-                tier = 4; // [帝王級] 20萬以上: 特效全開
-            } else if (finalWin >= 150000) {
-                tier = 3; // [大獎級] 15萬以上: 雙向噴錢 + 彩帶
-            } else if (finalWin >= 100000) {
-                tier = 2; // [中獎級] 10萬以上: 雙向噴錢
-            } else if (finalWin >= 50000) {
-                tier = 1; // [小獎級] 5萬以上: 單向噴錢
-            } else {
-                tier = 0; // [一般獎] 5萬以下: 少量噴錢 (無其他特效)
-            }
+            if (finalWin >= 200000) tier = 4;      // [帝王級]
+            else if (finalWin >= 150000) tier = 3; // [大獎級] (最高兩級不變)
+            else if (finalWin >= 100000) tier = 2; // [中獎級] >= 10萬: 左右雙管 3波
+            else if (finalWin >= 50000) tier = 1;  // [小獎級] >= 5萬: 中間單管 3波
+            else if (finalWin > 0) tier = 0;       // [安慰獎] < 5萬: 中間少量 (維持現狀)
+            else tier = -1;                        // [槓龜] 0分
 
             /* --- 1. 介面開啟 --- */
             modal.classList.remove('fade-out');
@@ -2005,13 +1999,14 @@ for(let k=0; k<missing; k++) {
             modal.classList.add('active');
             mask.classList.add('active');
             
-            // 音效分級
-            if (tier >= 3) AudioMgr.playSFX('bigWin'); // 15萬以上播大獎音樂
-            else AudioMgr.playSFX('youWin');           // 其他播普通音樂
+            // 音效分級 (Tier 3以上播 BigWin)
+            if (tier >= 3) AudioMgr.playSFX('bigWin');
+            else if (tier >= 0) AudioMgr.playSFX('youWin');
+            // 0分不播音效，保持尷尬的沉默 (或您想播個失敗音效也可以)
 
-            /* --- 2. 特效觸發區 --- */
+            /* --- 2. 特效觸發區 (最高兩級不變) --- */
 
-            // [A. 呼吸燈] 只有 Tier 4 (20萬以上) 才有
+            // [A. 呼吸燈] 只有 Tier 4 (20萬+) 才有
             let breath = document.querySelector('.vfx-breathing');
             if (tier === 4) {
                 if(!breath) {
@@ -2022,43 +2017,45 @@ for(let k=0; k<missing; k++) {
                 breath.classList.add('active');
             }
 
-            // [B. 彩帶] Tier 3 以上 (15萬以上) 才有
+            // [B. 彩帶] 只有 Tier 3 以上 (15萬+) 才有
             if (tier >= 3) {
-                // Tier 4 掉多一點(80個), Tier 3 掉少一點(40個)
                 let confettiCount = (tier === 4) ? 80 : 40;
                 for(let i=0; i<confettiCount; i++) { setTimeout(spawnConfetti, i * 30); }
             }
 
-            // [C. 噴錢邏輯] 根據金額決定強度與方向
+            // [C. 噴錢邏輯] ★ 重點修改區域 ★
             let sprayer = null;
-            if (finalWin > 0) { // 只要有贏錢就噴，只是量不同
+            if (tier >= 0) { // 有贏錢才噴
                 let waves = 0;
-                // 設定噴射波數
-                let maxWaves = (tier === 4) ? 8 : (tier === 3) ? 6 : (tier === 2) ? 4 : 2;
+                // 設定噴射波數: 
+                // Tier 4 (8波), Tier 3 (6波) -> 維持不變
+                // Tier 2 (3波), Tier 1 (3波) -> 新設定
+                // Tier 0 (2波) -> 維持現狀
+                let maxWaves = (tier === 4) ? 8 : (tier === 3) ? 6 : (tier >= 1) ? 3 : 2;
                 
                 sprayer = setInterval(() => {
                     if (tier === 4) {
-                        // [20萬+] 左+中+右 狂噴
+                        // [20萬+] 帝王級: 左+中+右 強力噴
                         CoinManager.fire(150, 0.1); 
                         CoinManager.fire(150, 0.5); 
                         CoinManager.fire(150, 0.9); 
                     } 
                     else if (tier === 3) {
-                        // [15萬+] 左+右 雙管
+                        // [15萬~20萬] 大獎級: 左+右 強力噴
                         CoinManager.fire(120, 0.1);
                         CoinManager.fire(120, 0.9);
                     }
                     else if (tier === 2) {
-                        // [10萬+] 也是雙管，但量稍微少一點
-                        CoinManager.fire(80, 0.2);
+                        // [10萬~15萬] 中獎級: 左+右 標準量 (80)
+                        CoinManager.fire(80, 0.2); // 稍微往中間靠一點點 (0.2/0.8) 視覺比較集中
                         CoinManager.fire(80, 0.8);
                     }
                     else if (tier === 1) {
-                        // [5萬~10萬] 中間單管 (標準)
+                        // [5萬~10萬] 小獎級: 中間單管 標準量 (80)
                         CoinManager.fire(80, 0.5);
                     }
                     else {
-                        // [<5萬] 中間單管 (少量意思一下)
+                        // [<5萬] 安慰獎: 中間單管 少量 (30)
                         CoinManager.fire(30, 0.5);
                     }
 
@@ -2068,12 +2065,11 @@ for(let k=0; k<missing; k++) {
             }
 
             /* --- 3. 分數跳動與等待 --- */
-            // 分數越高，跑分跑越久，爽度越高
             let animDuration = (tier >= 3) ? 2500 : 1500;
             animateValue(scoreEl, 0, finalWin, animDuration);
 
-            // 等待時間：20萬以上看 7秒，一般獎看 3秒
-            let waitTime = (tier >= 4) ? 7000 : (tier >= 3) ? 5500 : (tier >= 2) ? 4500 : 3000;
+            // 等待時間：0分稍微快一點(2.5秒)，其他依獎金遞增
+            let waitTime = (tier >= 4) ? 7000 : (tier >= 3) ? 5500 : (tier >= 1) ? 4000 : (tier === 0) ? 3000 : 2500;
             await wait(waitTime);
 
             /* --- 4. 清理與結束 --- */
@@ -2081,7 +2077,6 @@ for(let k=0; k<missing; k++) {
             
             if(breath) breath.classList.remove('active');
 
-            // 視窗淡出
             if(modal) {
                 modal.style.transition = 'opacity 0.5s';
                 modal.style.opacity = '0';
@@ -2093,7 +2088,6 @@ for(let k=0; k<missing; k++) {
             
             await wait(500); 
 
-            // 復原 DOM 狀態供下次使用
             if(modal) {
                 modal.classList.remove('active');
                 modal.style.opacity = ''; 
