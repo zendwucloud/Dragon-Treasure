@@ -146,7 +146,7 @@
         /* --- Canvas 金幣層 (Level 2) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 3500; /* 最高層級，確保不被遮擋 */
+            z-index: 2600; /* 最高層級，確保不被遮擋 */
             pointer-events: none; 
         }
 
@@ -799,7 +799,7 @@
             8:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             9:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 4.6, inBase: true, inFree: true }, 
+            11: { type: 'scatter', weight: 5.35, inBase: true, inFree: true }, 
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -1170,7 +1170,7 @@
 
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
-            const buyCost = gameData.bet * 150;
+            const buyCost = gameData.bet * 200;
             if (gameData.credit < buyCost) { 
                 alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); 
                 return; 
@@ -1180,7 +1180,7 @@
         }
 
         async function executeBuy() {
-            const buyCost = gameData.bet * 150;
+            const buyCost = gameData.bet * 200;
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
