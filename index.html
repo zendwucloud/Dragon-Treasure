@@ -425,6 +425,83 @@
         .buy-actions { display: flex; justify-content: space-around; margin-top: 15px; }
         .buy-actions .close-btn { margin-top: 0; padding: 8px 20px; font-size: 1.8vh; }
 
+/* --- ★ V13.121: MAX WIN 豪華特效包 ★ --- */
+        
+        /* 1. 紅色恭喜字樣 */
+        .style-congrats {
+            display: block;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 4vh; /* 比 MAX WIN 小一點 */
+            color: #ff0033; /* 鮮豔紅 */
+            text-shadow: 2px 2px 0 #fff, 0 0 20px #ff0000;
+            margin-bottom: 3vh; 
+            animation: bounceIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+        @keyframes bounceIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+
+        /* 2. 全螢幕呼吸警示燈 */
+        .vfx-breathing {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 2800; /* 在金幣之上 */
+            box-shadow: inset 0 0 50px 20px rgba(255, 0, 0, 0);
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .vfx-breathing.active {
+            animation: redAlert 0.8s infinite alternate;
+            opacity: 1;
+        }
+        @keyframes redAlert {
+            0% { box-shadow: inset 0 0 30px 10px rgba(255, 0, 0, 0.2); background-color: rgba(255,0,0,0.05); }
+            100% { box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.8); background-color: rgba(255,0,0,0.2); }
+        }
+
+        /* 3. 彩帶 (Confetti) */
+        .confetti {
+            position: absolute; top: -5%; width: 1.5vh; height: 1.5vh;
+            z-index: 2900; pointer-events: none;
+            animation: fallDown linear forwards;
+        }
+        @keyframes fallDown {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+/* --- ★ V13.122: MAX WIN 視窗樣式 (修正文字被擋住問題) ★ --- */
+        #max-win-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* 半透明黑底，讓字更清楚 */
+            z-index: 3000; /* 比彩帶(2900)還高，保證在最上層 */
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        #max-win-modal.active { opacity: 1; pointer-events: auto; }
+        
+        .max-win-content { text-align: center; transform: scale(0.8); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* 超大標題樣式 */
+        .style-max-title {
+            font-family: 'Arial Black', sans-serif; 
+            font-size: 8vh; /* 超大字體 */
+            color: #ffff00; 
+            text-shadow: 0 0 20px gold, 4px 4px 0 #ff4500;
+            margin: 2vh 0 4vh 0; /* 上 右 下 左，增加下方間距 */
+            animation: pulseText 1s infinite alternate;
+        }
+        @keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        /* 分數樣式 */
+        #max-win-score {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 6vh;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            /* 新增這一行： */
+            margin-top: 2vh;
+        }
+
     </style>
 </head>
 <body>
@@ -484,9 +561,18 @@
         </div>
 
         <div id="fg-end-modal">
+
             <div class="content-wrapper">
                 <img src="you-win.png" class="win-title">
                 <div id="fg-end-score">0.00</div>
+            </div>
+        </div>
+
+        <div id="max-win-modal">
+            <div class="max-win-content">
+                <div class="style-max-title">🏆 MAX WIN 🏆</div>
+                <div class="style-congrats">Congratulations!</div>
+                <div id="max-win-score">0.00</div>
             </div>
         </div>
 
@@ -647,168 +733,94 @@
     </script>
 
     <script>
-        const CoinManager = {
-            canvas: null,
-            ctx: null,
-            particles: [],
-            isRunning: false,
-            coinImg: new Image(),
-            imgLoaded: false,
+        /* ★ V13.121: 升級版 CoinManager (支援指定發射位置) ★ */
+    const CoinManager = {
+        canvas: null, ctx: null, particles: [], isRunning: false,
+        coinImg: new Image(), imgLoaded: false,
 
-            init: function() {
-                this.canvas = document.getElementById('coin-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                this.coinImg.src = 'coin.png';
-                this.coinImg.onload = () => { this.imgLoaded = true; };
-            },
+        init: function() {
+            this.canvas = document.getElementById('coin-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.coinImg.src = 'coin.png';
+            this.coinImg.onload = () => { this.imgLoaded = true; };
+        },
 
-            resize: function() {
-                if(this.canvas) {
-                    this.canvas.width = this.canvas.offsetWidth;
-                    this.canvas.height = this.canvas.offsetHeight;
-                }
-            },
-
-            fire: function(amount) {
-                let count = 10; 
-                let sparkleCount = 5;
-
-                if (amount > gameData.bet * 5) { count = 20; sparkleCount = 10; }
-                if (amount > gameData.bet * 10) { count = 40; sparkleCount = 20; }
-
-                if (!this.isRunning) {
-                    this.isRunning = true;
-                    this.animate();
-                }
-
-                for (let i = 0; i < count; i++) {
-                    this.particles.push(this.createParticle('coin'));
-                }
-                for (let i = 0; i < sparkleCount; i++) {
-                    this.particles.push(this.createParticle('sparkle'));
-                }
-            },
-
-            createParticle: function(type) {
-                const w = this.canvas.width;
-                const h = this.canvas.height;
-                
-                if (type === 'coin') {
-                    return {
-                        type: 'coin',
-                        x: w / 2, 
-                        y: h + 50, 
-                        vx: (Math.random() - 0.5) * (w * 0.03), 
-                        vy: -(Math.random() * h * 0.025 + h * 0.015), 
-                        gravity: h * 0.0005,
-                        size: (Math.random() * 30 + 30) * (w / 720) * 3, 
-                        rotation: Math.random() * 360,
-                        rSpeed: (Math.random() - 0.5) * 10,
-                        flip: Math.random() * Math.PI, 
-                        flipSpeed: Math.random() * 0.2 + 0.1,
-                        isFlashing: false,
-                        flashTimer: 0,
-                        flashDuration: 30 // 約 0.5 秒 (60fps)
-                    };
-                } else {
-                    return {
-                        type: 'sparkle',
-                        x: w / 2 + (Math.random() - 0.5) * 50,
-                        y: h + 50,
-                        vx: (Math.random() - 0.5) * (w * 0.04),
-                        vy: -(Math.random() * h * 0.028 + h * 0.01),
-                        gravity: h * 0.0002,
-                        size: Math.random() * 5 + 2, 
-                        alpha: 1,
-                        decay: Math.random() * 0.02 + 0.01
-                    };
-                }
-            },
-
-            animate: function() {
-                if (!this.isRunning) return;
-                
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                for (let i = 0; i < this.particles.length; i++) {
-                    let p = this.particles[i];
-                    
-                    p.vy += p.gravity;
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    if (p.type === 'coin') {
-                        p.rotation += p.rSpeed;
-                        p.flip += p.flipSpeed;
-
-                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
-                            p.isFlashing = true;
-                            p.flashTimer = 0;
-                        }
-
-                        let brightness = 100; 
-                        if (p.isFlashing) {
-                            p.flashTimer++;
-                            let progress = p.flashTimer / p.flashDuration;
-                            brightness = 100 + 100 * Math.sin(progress * Math.PI);
-                            
-                            if (p.flashTimer >= p.flashDuration) {
-                                p.isFlashing = false; // 閃爍結束
-                            }
-                        }
-                        
-                        this.ctx.save();
-                        this.ctx.translate(p.x, p.y);
-                        this.ctx.rotate(p.rotation * Math.PI / 180);
-                        
-                        let scaleX = Math.cos(p.flip); 
-                        this.ctx.scale(scaleX, 1);
-                        
-                        if (brightness > 105) {
-                            this.ctx.filter = `brightness(${brightness}%)`;
-                        }
-
-                        if (this.imgLoaded) {
-                            this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
-                        } else {
-                            this.ctx.beginPath();
-                            this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
-                            this.ctx.fillStyle = '#ffd700';
-                            this.ctx.fill();
-                        }
-                        this.ctx.restore();
-                    } else {
-                        p.alpha -= p.decay;
-                        if(p.alpha <= 0) {
-                            this.particles.splice(i, 1);
-                            i--;
-                            continue;
-                        }
-                        this.ctx.save();
-                        this.ctx.globalAlpha = p.alpha;
-                        this.ctx.beginPath();
-                        this.ctx.fillStyle = (Math.random() > 0.5) ? '#ffffff' : '#ffff00'; 
-                        this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                        this.ctx.restore();
-                    }
-
-                    if (p.y > this.canvas.height + 100) {
-                        this.particles.splice(i, 1);
-                        i--;
-                    }
-                }
-
-                if (this.particles.length > 0) {
-                    requestAnimationFrame(() => this.animate());
-                } else {
-                    this.isRunning = false;
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                }
+        resize: function() {
+            if(this.canvas) {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
             }
-        };
+        },
+
+        // 新增 originX 參數：0.5=中間, 0.1=左邊, 0.9=右邊
+        fire: function(amount, originX = 0.5) {
+            let count = 20; 
+            if (!this.isRunning) { this.isRunning = true; this.animate(); }
+            for (let i = 0; i < count; i++) this.particles.push(this.createParticle('coin', originX));
+            for (let i = 0; i < 5; i++) this.particles.push(this.createParticle('sparkle', originX));
+        },
+
+        createParticle: function(type, originX) {
+            const w = this.canvas.width; const h = this.canvas.height;
+            const startX = w * originX; // 根據參數決定發射點
+            
+            if (type === 'coin') {
+                return {
+                    type: 'coin',
+                    x: startX, y: h + 50, 
+                    // 讓噴射方向稍微往中間偏
+                    vx: (Math.random() - 0.5 + (0.5 - originX)) * (w * 0.04), 
+                    vy: -(Math.random() * h * 0.03 + h * 0.02), // 噴高一點
+                    gravity: h * 0.0006,
+                    size: (Math.random() * 30 + 30) * (w / 720) * 3, 
+                    rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 10,
+                    flip: Math.random() * Math.PI, flipSpeed: Math.random() * 0.2 + 0.1,
+                    isFlashing: false, flashTimer: 0, flashDuration: 30
+                };
+            } else {
+                return {
+                    type: 'sparkle',
+                    x: startX + (Math.random() - 0.5) * 50, y: h + 50,
+                    vx: (Math.random() - 0.5) * (w * 0.05),
+                    vy: -(Math.random() * h * 0.03 + h * 0.015),
+                    gravity: h * 0.0002,
+                    size: Math.random() * 8 + 4, alpha: 1, decay: Math.random() * 0.03 + 0.01
+                };
+            }
+        },
+
+        animate: function() {
+            if (!this.isRunning) return;
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            for (let i = 0; i < this.particles.length; i++) {
+                let p = this.particles[i];
+                p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
+
+                if (p.type === 'coin') {
+                    p.rotation += p.rSpeed; p.flip += p.flipSpeed;
+                    this.ctx.save();
+                    this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate(p.rotation * Math.PI / 180);
+                    this.ctx.scale(Math.cos(p.flip), 1);
+                    if (this.imgLoaded) this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
+                    else { this.ctx.beginPath(); this.ctx.arc(0, 0, p.size/2, 0, Math.PI*2); this.ctx.fillStyle='#ffd700'; this.ctx.fill(); }
+                    this.ctx.restore();
+                } else {
+                    p.alpha -= p.decay;
+                    if(p.alpha <= 0) { this.particles.splice(i, 1); i--; continue; }
+                    this.ctx.save(); this.ctx.globalAlpha = p.alpha;
+                    this.ctx.beginPath(); this.ctx.fillStyle = (Math.random()>0.5)?'#ffffff':'#ffff00'; 
+                    this.ctx.fillRect(p.x, p.y, p.size, p.size); this.ctx.restore();
+                }
+                if (p.y > this.canvas.height + 100) { this.particles.splice(i, 1); i--; }
+            }
+            if (this.particles.length > 0) requestAnimationFrame(() => this.animate());
+            else { this.isRunning = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+        }
+    };
     </script>
 
     <script>
@@ -1671,6 +1683,79 @@
 
                 let finalWin = roundScore * totalMul; 
                 gameData.currentWin += finalWin; 
+
+                
+            
+           /* ★★★★★ [Max Win 保護機制 - 終極版] ★★★★★ */
+            // 最大賠率上限
+            const MAX_PAYOUT_MULTIPLIER = 15000; 
+            const MAX_WIN_AMOUNT = gameData.bet * MAX_PAYOUT_MULTIPLIER;
+            
+            if (gameData.currentWin >= MAX_WIN_AMOUNT) {
+                // 1. 鎖定金額
+                gameData.currentWin = MAX_WIN_AMOUNT;
+                updateAllUI(); 
+                
+                // 2. ★ 修正：顯示全螢幕 MAX WIN 視窗 (解決文字被擋住)
+                const maxModal = document.getElementById('max-win-modal');
+                const maxScore = document.getElementById('max-win-score');
+                if(maxModal && maxScore) {
+                    maxScore.innerText = gameData.currentWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+                    maxModal.classList.add('active');
+                }
+
+                // 3. 手動觸發符號閃爍
+                matches.forEach(key => {
+                    let [c, r] = key.split(','); 
+                    let el = getSymbolEl(c, r);
+                    if(el) { el.classList.add('anim-win'); el.classList.add('active'); }
+                });
+
+                // 4. ★ 新增：播放 "YOU WIN" 音效 (加強版)
+                console.log("🏆 觸發 MAX WIN 豪華特效！");
+                AudioMgr.playSFX('bigWin'); 
+                setTimeout(() => { AudioMgr.playSFX('youWin'); }, 500); // 延遲 0.5秒 喊出 You Win!
+
+                // --- 特效啟動區 ---
+                
+                // A. 呼吸燈
+                let breath = document.querySelector('.vfx-breathing');
+                if(!breath) {
+                    breath = document.createElement('div');
+                    breath.className = 'vfx-breathing';
+                    document.querySelector('.stage').appendChild(breath);
+                }
+                breath.classList.add('active');
+
+                // B. 彩帶雨
+                for(let i=0; i<100; i++) { setTimeout(spawnConfetti, i * 20); }
+
+                // C. 左右金幣噴泉
+                let fountain = setInterval(() => {
+                    CoinManager.fire(100, 0.1); 
+                    CoinManager.fire(100, 0.9); 
+                }, 100);
+
+                // 5. 等待 5 秒 (多給一點時間看分數)
+                await wait(5000); 
+                
+                // 6. 清理戰場並結束
+                clearInterval(fountain);
+                breath.classList.remove('active');
+                
+if(maxModal) {
+    maxModal.style.transition = 'opacity 0.5s'; // 確保有轉場
+    maxModal.style.opacity = '0'; // 淡出
+}
+await wait(500); // 等待淡出動畫
+if(maxModal) {
+    maxModal.classList.remove('active');
+    maxModal.style.opacity = ''; // 復原設定，供下次使用
+}
+endSpin(); 
+                return; 
+            }
+
                 updateAllUI(); 
                 triggerWinAnimation(); 
                 showWinMessage(gameData.currentWin);
@@ -1894,39 +1979,131 @@ for(let k=0; k<missing; k++) {
 
         async function endFreeGame() {
             const modal = document.getElementById('fg-end-modal');
-            const mask = document.getElementById('fg-mask'); // ★ 取得獨立遮罩
+            const mask = document.getElementById('fg-mask');
             const scoreEl = document.getElementById('fg-end-score');
             const finalWin = gameData.currentWin;
 
-            /* ★ 同步控制遮罩與視窗 ★ */
+            // ★ V13.123: 改用「固定金額」分級 (您要求的設定)
+            let tier = 0;
+            
+            // 階層判斷邏輯
+            if (finalWin >= 200000) {
+                tier = 4; // [帝王級] 20萬以上: 特效全開
+            } else if (finalWin >= 150000) {
+                tier = 3; // [大獎級] 15萬以上: 雙向噴錢 + 彩帶
+            } else if (finalWin >= 100000) {
+                tier = 2; // [中獎級] 10萬以上: 雙向噴錢
+            } else if (finalWin >= 50000) {
+                tier = 1; // [小獎級] 5萬以上: 單向噴錢
+            } else {
+                tier = 0; // [一般獎] 5萬以下: 少量噴錢 (無其他特效)
+            }
+
+            /* --- 1. 介面開啟 --- */
             modal.classList.remove('fade-out');
             mask.classList.remove('fade-out');
-
             modal.classList.add('active');
             mask.classList.add('active');
             
-            AudioMgr.playSFX('youWin');
+            // 音效分級
+            if (tier >= 3) AudioMgr.playSFX('bigWin'); // 15萬以上播大獎音樂
+            else AudioMgr.playSFX('youWin');           // 其他播普通音樂
 
-            // 開始噴金幣
-            let waves = 0;
-            let sprayer = setInterval(() => {
-                CoinManager.fire(finalWin); 
-                waves++;
-                if(waves >= 5) clearInterval(sprayer);
-            }, 600);
+            /* --- 2. 特效觸發區 --- */
 
-            animateValue(scoreEl, 0, finalWin, 1500);
+            // [A. 呼吸燈] 只有 Tier 4 (20萬以上) 才有
+            let breath = document.querySelector('.vfx-breathing');
+            if (tier === 4) {
+                if(!breath) {
+                    breath = document.createElement('div');
+                    breath.className = 'vfx-breathing';
+                    document.querySelector('.stage').appendChild(breath);
+                }
+                breath.classList.add('active');
+            }
 
-            await wait(6500);
+            // [B. 彩帶] Tier 3 以上 (15萬以上) 才有
+            if (tier >= 3) {
+                // Tier 4 掉多一點(80個), Tier 3 掉少一點(40個)
+                let confettiCount = (tier === 4) ? 80 : 40;
+                for(let i=0; i<confettiCount; i++) { setTimeout(spawnConfetti, i * 30); }
+            }
 
-            modal.classList.add('fade-out');
-            mask.classList.add('fade-out');
-            await wait(1000); 
+            // [C. 噴錢邏輯] 根據金額決定強度與方向
+            let sprayer = null;
+            if (finalWin > 0) { // 只要有贏錢就噴，只是量不同
+                let waves = 0;
+                // 設定噴射波數
+                let maxWaves = (tier === 4) ? 8 : (tier === 3) ? 6 : (tier === 2) ? 4 : 2;
+                
+                sprayer = setInterval(() => {
+                    if (tier === 4) {
+                        // [20萬+] 左+中+右 狂噴
+                        CoinManager.fire(150, 0.1); 
+                        CoinManager.fire(150, 0.5); 
+                        CoinManager.fire(150, 0.9); 
+                    } 
+                    else if (tier === 3) {
+                        // [15萬+] 左+右 雙管
+                        CoinManager.fire(120, 0.1);
+                        CoinManager.fire(120, 0.9);
+                    }
+                    else if (tier === 2) {
+                        // [10萬+] 也是雙管，但量稍微少一點
+                        CoinManager.fire(80, 0.2);
+                        CoinManager.fire(80, 0.8);
+                    }
+                    else if (tier === 1) {
+                        // [5萬~10萬] 中間單管 (標準)
+                        CoinManager.fire(80, 0.5);
+                    }
+                    else {
+                        // [<5萬] 中間單管 (少量意思一下)
+                        CoinManager.fire(30, 0.5);
+                    }
 
-            modal.classList.remove('active');
-            mask.classList.remove('active');
-            modal.classList.remove('fade-out');
-            mask.classList.remove('fade-out');
+                    waves++;
+                    if(waves >= maxWaves) clearInterval(sprayer);
+                }, 600);
+            }
+
+            /* --- 3. 分數跳動與等待 --- */
+            // 分數越高，跑分跑越久，爽度越高
+            let animDuration = (tier >= 3) ? 2500 : 1500;
+            animateValue(scoreEl, 0, finalWin, animDuration);
+
+            // 等待時間：20萬以上看 7秒，一般獎看 3秒
+            let waitTime = (tier >= 4) ? 7000 : (tier >= 3) ? 5500 : (tier >= 2) ? 4500 : 3000;
+            await wait(waitTime);
+
+            /* --- 4. 清理與結束 --- */
+            if(sprayer) clearInterval(sprayer);
+            
+            if(breath) breath.classList.remove('active');
+
+            // 視窗淡出
+            if(modal) {
+                modal.style.transition = 'opacity 0.5s';
+                modal.style.opacity = '0';
+            }
+            if(mask) {
+                mask.style.transition = 'opacity 0.5s';
+                mask.style.opacity = '0';
+            }
+            
+            await wait(500); 
+
+            // 復原 DOM 狀態供下次使用
+            if(modal) {
+                modal.classList.remove('active');
+                modal.style.opacity = ''; 
+                modal.style.transition = '';
+            }
+            if(mask) {
+                mask.classList.remove('active');
+                mask.style.opacity = '';
+                mask.style.transition = '';
+            }
 
             gameData.isFreeGame = false;
             document.body.classList.remove('free-mode');
@@ -1934,7 +2111,7 @@ for(let k=0; k<missing; k++) {
             AudioMgr.playBGM('main');
             
             const msgBar = document.getElementById('ui-message-bar');
-            msgBar.style.display = 'none';
+            if(msgBar) msgBar.style.display = 'none';
 
             gameData.credit += gameData.currentWin; 
             gameData.currentWin = 0; 
@@ -1947,7 +2124,7 @@ for(let k=0; k<missing; k++) {
             if (bgVideo && bgVideo.paused) {
                 bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
             }
-        } 
+        }
 
         function changeBet(amount) {
             if (isSpinning) return; 
@@ -2034,6 +2211,27 @@ for(let k=0; k<missing; k++) {
              let el = document.querySelector('.info-content');
              if(el) el.lastY = e.touches[0].clientY;
         }, { passive: false });
+
+/* ... 這裡應該是原本代碼的最後面 ... */
+    
+    /* ★★★ 請貼在這裡 (第 4 段代碼) ★★★ */
+    function spawnConfetti() {
+        const stage = document.querySelector('.stage');
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        const el = document.createElement('div');
+        el.className = 'confetti';
+        
+        el.style.left = Math.random() * 100 + '%';
+        el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        el.style.animationDuration = (Math.random() * 2 + 1.5) + 's'; 
+        
+        stage.appendChild(el);
+        setTimeout(() => { el.remove(); }, 3500);
+    }
+
+</script> </body>
+</html>
+
 
     </script>
 </body>
