@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> Dragon's Treasure(V13.130)</title>
+    <title> Dragon's Treasure(V9.2 Final)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -100,19 +100,15 @@
             width: 100%; height: 100%;
             object-fit: cover;
             z-index: 0;
-            
-            /* 強制開啟硬體加速 */
             transform: translate3d(0, 0, 0); 
             will-change: transform;          
             backface-visibility: hidden;     
-
             filter: brightness(0.75);
             transition: filter 1.0s ease-in-out;
         }
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
-        /* 火光特效 (混合模式 Overlay) */
         .fire-effect {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5; opacity: 0;
@@ -133,7 +129,6 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- 獨立黑色遮罩層 (Level 1) --- */
         #fg-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.7); 
@@ -143,14 +138,12 @@
         #fg-mask.active { opacity: 1; pointer-events: auto; }
         #fg-mask.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
 
-        /* --- Canvas 金幣層 (Level 2) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2600; /* 最高層級，確保不被遮擋 */
+            z-index: 2600; 
             pointer-events: none; 
         }
 
-        /* --- 按鈕參數 --- */
         .phone-button {
             position: absolute; left: 2%; top: 2%; width: 9%; 
             cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
@@ -200,7 +193,6 @@
         .ghost-layer { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0.001; z-index: -999; pointer-events: none; }
         .ghost-layer .sym-scatter.active { animation-play-state: running !important; }
 
-        /* WILD CSS */
         .sym-wild { 
             background-image: url('WILD.png'); 
             width: 115%; height: 100%; 
@@ -229,7 +221,6 @@
         @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
 
-        /* 一般符號動畫 */
         @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
         .sym-1.active { background-image: url('s1_sprite.png') !important; } 
@@ -238,7 +229,6 @@
         .sym-4.active { background-image: url('s4_sprite.png') !important; } 
         .sym-5.active { background-image: url('s5_sprite.png') !important; }
 
-        /* 龍眼倍數符號 */
         .sym-mul { 
             z-index: 180; 
             width: 125%; margin-left: -12.5%; 
@@ -276,7 +266,6 @@
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
         .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
 
-        /* 爆炸特效 */
         .vfx-explosion {
             position: absolute; top: 50%; 
             left: 42%; 
@@ -295,7 +284,6 @@
             100% { background-position: 100% 0%; opacity: 0; }
         }
 
-        /* UI 文字 */
         .value-text { color: #fff; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 2px 2px 2px #000; position: absolute; z-index: 500; pointer-events: none; white-space: nowrap; }
         #ui-credit { bottom: 7.6%; left: 16%; transform: translateX(-50%); font-size: 2.2vh; text-align: center; }
         #ui-bet { bottom: 7.6%; right: 14%; transform: translateX(50%); font-size: 2.2vh; text-align: center; }
@@ -799,7 +787,7 @@
             8:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             9:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 5.35, inBase: true, inFree: true }, 
+            11: { type: 'scatter', weight: 4.85, inBase: true, inFree: true }, 
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -808,6 +796,11 @@
 
         let poolBase = []; 
         let poolFree = []; 
+        
+        // ★ [移植 9.2] 新增分軸權重變數
+        let poolsFreeByReel = [[], [], [], [], []]; 
+        let totalWeightsFreeByReel = [0, 0, 0, 0, 0];
+        
         let totalWeightBase = 0; 
         let totalWeightFree = 0;
         let isBuyingFeature = false; 
@@ -832,33 +825,52 @@
         }
         initBasePool(); 
 
+        // ★ [移植 9.2] 分軸阻斷權重邏輯
         function updateFreeGameWeights(scatterCount) {
-            poolFree = [];
-            totalWeightFree = 0;
-            const symbolQuota = 600; 
-            const multiplierQuota = 400; 
+            poolsFreeByReel = [[], [], [], [], []];
+            totalWeightsFreeByReel = [0, 0, 0, 0, 0];
+
+            const symbolQuota = 3600; 
+            const baseMultiplierQuota = 800; // 提高總量基數，強化阻斷感
 
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            let ratios = { 1: 4, 2: 8, 3: 12, 4: 80, 5: 80, 10: 10, 11: 2 };
+            // S4/S5 機率拉高至 35% (1400/4000)
+            let ratios = { 1: 100, 2: 200, 3: 300, 4: 1400, 5: 1400, 10: 142, 11: 30 };
             let ratioSum = 0;
             for(let id in ratios) ratioSum += ratios[id];
 
-            connectableSymbols.forEach(id => {
-                let w = (ratios[id] / ratioSum) * symbolQuota;
-                if (scatterCount === 3 && id === 10) w *= 1.2; 
-                poolFree.push({ id: id, weight: w });
-                totalWeightFree += w;
-            });
+            for (let c = 0; c < 5; c++) {
+                // --- A. 計算普通符號權重 ---
+                connectableSymbols.forEach(id => {
+                    let w = (ratios[id] / ratioSum) * symbolQuota;
+                    if (scatterCount === 3 && id === 10) w *= 1.2; 
+                    poolsFreeByReel[c].push({ id: id, weight: w });
+                    totalWeightsFreeByReel[c] += w;
+                });
 
-            let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
-            if (scatterCount === 3) { w2 = multiplierQuota * 0.92; w10 = multiplierQuota * 0.08; } 
-            else if (scatterCount === 4) { w2 = multiplierQuota * 0.70; w10 = multiplierQuota * 0.28; w25 = multiplierQuota * 0.02; } 
-            else { w2 = multiplierQuota * 0.45; w10 = multiplierQuota * 0.40; w25 = multiplierQuota * 0.10; w100 = multiplierQuota * 0.05; }
+                // --- B. 計算分軸龍眼權重 (前三軸阻斷) ---
+                let reelMulBoost = 1.0;
+                if (c === 0) reelMulBoost = 3.5;      // 第 1 軸龍眼爆多 (阻斷起手)
+                else if (c === 1) reelMulBoost = 2.0; // 第 2 軸龍眼增多
+                else if (c === 2) reelMulBoost = 1.5; // 第 3 軸龍眼稍微增多
+                else reelMulBoost = 0.5;              // 後兩軸龍眼變少
 
-            if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
-            if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
-            if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
-            if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
+                let currentReelMulQuota = baseMultiplierQuota * reelMulBoost;
+
+                let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
+                if (scatterCount === 3) { 
+                    w2 = currentReelMulQuota * 0.95; w10 = currentReelMulQuota * 0.05; 
+                } else if (scatterCount === 4) { 
+                    w2 = currentReelMulQuota * 0.80; w10 = currentReelMulQuota * 0.15; w25 = currentReelMulQuota * 0.05; 
+                } else { 
+                    w2 = currentReelMulQuota * 0.60; w10 = currentReelMulQuota * 0.25; w25 = currentReelMulQuota * 0.10; w100 = currentReelMulQuota * 0.05; 
+                }
+
+                if (w2 > 0) { poolsFreeByReel[c].push({ id: 20, weight: w2 }); totalWeightsFreeByReel[c] += w2; }
+                if (w10 > 0) { poolsFreeByReel[c].push({ id: 21, weight: w10 }); totalWeightsFreeByReel[c] += w10; }
+                if (w25 > 0) { poolsFreeByReel[c].push({ id: 22, weight: w25 }); totalWeightsFreeByReel[c] += w25; }
+                if (w100 > 0) { poolsFreeByReel[c].push({ id: 23, weight: w100 }); totalWeightsFreeByReel[c] += w100; }
+            }
         }
 
         let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
@@ -1253,13 +1265,31 @@
             }
         }
 
-        function getWeightedSymbol() {
-            let usePool = gameData.isFreeGame ? poolFree : poolBase;
-            let useTotal = gameData.isFreeGame ? totalWeightFree : totalWeightBase;
-            if (gameData.isFreeGame && usePool.length === 0) return 1;
-            let r = Math.random() * useTotal; let sum = 0;
-            for (let item of usePool) { sum += item.weight; if (r <= sum) return item.id; }
-            return gameData.isFreeGame ? 1 : 9; 
+        // ★ [移植 9.2] 支援分軸索引的取樣函數
+        function getWeightedSymbol(reelIndex = 0) {
+            if (gameData.isFreeGame) {
+                // 使用分軸權重池
+                let usePool = poolsFreeByReel[reelIndex];
+                let useTotal = totalWeightsFreeByReel[reelIndex];
+                if (!usePool || usePool.length === 0) return 1;
+                
+                let r = Math.random() * useTotal; 
+                let sum = 0;
+                for (let item of usePool) { 
+                    sum += item.weight; 
+                    if (r <= sum) return item.id; 
+                }
+                return 1;
+            } else {
+                // 一般模式維持原樣
+                let r = Math.random() * totalWeightBase; 
+                let sum = 0;
+                for (let item of poolBase) { 
+                    sum += item.weight; 
+                    if (r <= sum) return item.id; 
+                }
+                return 9; 
+            }
         }
 
         function initGrid() {
@@ -1332,7 +1362,8 @@
                         type = 11;
                     } else {
                         while(true) {
-                            type = getWeightedSymbol();
+                            // ★ 修正：這裡傳入 c，BaseGame 雖然用不到但傳入無妨
+                            type = getWeightedSymbol(c);
                             if (c === 0 && type === 10) continue;
                             if (gameData.isFreeGame && type === 10) {
                                 if (hasWildInCol) continue; 
@@ -1357,7 +1388,8 @@
 
                     let fillerSyms = []; 
                     for(let i=0; i<6; i++) {
-                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
+                        // ★ 修正重點：這裡必須傳入 (c)，否則 FG 模式會壞掉
+                        fillerSyms.push(getWeightedSymbol(c), getWeightedSymbol(c), getWeightedSymbol(c)); 
                     } 
                     
                     let targetSyms = finalGridData[c];
@@ -1513,7 +1545,7 @@
                 let finalWin = roundScore * totalMul; 
                 gameData.currentWin += finalWin; 
 
-                /* ★★★★★ [Max Win 保護機制 - 統一視覺版] ★★★★★ */
+                /* ★★★★★ [Max Win 保護機制] ★★★★★ */
                 const MAX_PAYOUT_MULTIPLIER = 15000; 
                 const MAX_WIN_AMOUNT = gameData.bet * MAX_PAYOUT_MULTIPLIER;
                 
@@ -1673,15 +1705,28 @@
         async function doRefill(matches) {
             let hasRefill = false;
             for(let c=0; c<config.cols; c++) {
-                let oldColData = gridData[c]; let survivors = [];
-                for(let r=0; r<oldColData.length; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); }
+                let oldColData = gridData[c]; 
+                let survivors = [];
+                for(let r=0; r<oldColData.length; r++) { 
+                    if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); 
+                }
+                
                 if(survivors.length === oldColData.length) continue; 
                 hasRefill = true;
-                let colDiv = document.getElementById(`col-${c}`); colDiv.innerHTML = ''; let newColData = [];
+                
+                let colDiv = document.getElementById(`col-${c}`); 
+                colDiv.innerHTML = ''; 
+                let newColData = [];
+                
                 survivors.forEach((item, newR) => {
-                    newColData.push(item.type); let el = createSymbol(item.type); el.setAttribute('data-row', newR);
-                    let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
-                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                    newColData.push(item.type); 
+                    let el = createSymbol(item.type); 
+                    el.setAttribute('data-row', newR);
+                    let delta = item.oldR - newR; 
+                    el.style.transform = `translateY(-${delta * 100}%)`;
+                    colDiv.appendChild(el); 
+                    el.offsetHeight; 
+                    el.style.transform = `translateY(0)`;
                 });
 
                 let hasWildInCol = survivors.some(item => item.type === 10);
@@ -1690,9 +1735,11 @@
                 for(let k=0; k<missing; k++) {
                     let type;
                     while(true) {
-                        type = getWeightedSymbol();
+                        // ★ 修復：正確傳入 c，確保分軸阻斷生效
+                        type = getWeightedSymbol(c); 
                         if (!type) type = 1;
-                        if (c === 0 && type === 10) continue;
+                        
+                        // 檢查每軸限一 Wild 規則
                         if (gameData.isFreeGame && type === 10) {
                             if (hasWildInCol) continue; 
                             hasWildInCol = true; 
@@ -1700,19 +1747,27 @@
                         break; 
                     }
                     newColData.push(type);
-                    let el = createSymbol(type); let newR = survivors.length + k;
+                    
+                    let newR = survivors.length + k;
+                    let el = createSymbol(type); 
                     el.setAttribute('data-row', newR);
-                    let dropDist = (config.rows + k) - newR; el.style.transform = `translateY(-${dropDist * 100}%)`;
-                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                    let dropDist = (config.rows + k) - newR; 
+                    el.style.transform = `translateY(-${dropDist * 100}%)`;
+                    colDiv.appendChild(el); 
+                    el.offsetHeight; 
+                    el.style.transform = `translateY(0)`;
                 }
                 gridData[c] = newColData;
             }
+            
             if(hasRefill) { 
                 await wait(400); 
                 AudioMgr.playSFX('stop');
                 await wait(300); 
                 checkLogic(); 
-            } else { endSpin(); }
+            } else { 
+                endSpin(); 
+            }
         }
 
         function endSpin() {
