@@ -877,6 +877,57 @@
         let gridData = []; let isSpinning = false; let score = 0; 
         let promoInterval = null;
 
+        /* ========================================= */
+        /* ★ [新增] 與 Lobby 通訊的核心邏輯 ★ */
+        /* ========================================= */
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            // 1. 接收大廳傳來的餘額 (初始化)
+            if (data.type === 'initBalance') {
+                console.log("收到大廳餘額:", data.value);
+                gameData.credit = data.value;
+                updateAllUI(); // 立即刷新 UI 顯示正確金額
+            }
+
+            // 2. 接收大廳傳來的跑馬燈訊息
+            if (data.type === 'tickerMessage') {
+                showSystemTicker(data.msg);
+            }
+        });
+
+        // 用來發送餘額回大廳的函式
+        function reportBalanceToLobby() {
+            // 檢查是否有父視窗，避免單獨開啟報錯
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'updateBalance',
+                    value: gameData.credit
+                }, '*');
+            }
+        }
+
+        // 專門顯示來自大廳的跑馬燈 (優先權高，暫時蓋過 WIN 訊息)
+        function showSystemTicker(msg) {
+            const msgBar = document.getElementById('ui-message-bar');
+            const msgContent = document.getElementById('msg-content');
+            
+            // 強制顯示
+            msgBar.style.display = 'flex';
+            msgContent.innerText = "📢 " + msg;
+            // 使用藍色樣式區別系統公告
+            msgContent.className = 'style-blue anim-scroll'; 
+            
+            // 8秒後恢復隱藏 (或是讓原本的遊戲邏輯接手)
+            setTimeout(() => {
+                if(!isSpinning && gameData.currentWin === 0 && !gameData.isFreeGame) { 
+                    msgBar.style.display = 'none'; 
+                    msgContent.className = ''; 
+                }
+            }, 8000);
+        }
+        /* ========================================= */
+
         window.onload = () => {
             const imageAssets = [
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
@@ -1199,6 +1250,7 @@
 
             gameData.credit -= buyCost; 
             updateAllUI(); 
+            reportBalanceToLobby(); // ★ [修改] 購買扣款後立即回報
             isBuyingFeature = true;
             isAutoPlay = false;
             updateAutoPlayButton(); 
@@ -1332,7 +1384,10 @@
             
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
-                if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
+                if(!isBuyingFeature) { 
+                    gameData.credit -= gameData.bet; 
+                    reportBalanceToLobby(); // ★ [修改] 扣款後立即回報
+                }
                 gameData.accumulatedMultiplier = 0; 
                 resetMultiplierUI(); 
                 gameData.currentWin = 0;
@@ -1777,6 +1832,8 @@
             document.getElementById('spin-icon').classList.remove('fast');
             if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
             if(gameData.currentWin > 0) { gameData.credit += gameData.currentWin; gameData.currentWin = 0; updateAllUI(); }
+            
+            reportBalanceToLobby(); // ★ [修改] 結算完成後立即回報
 
             if (isAutoPlay && !gameData.isFreeGame) {
                 if (gameData.credit >= gameData.bet) {
