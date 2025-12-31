@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> Dragon's Treasure (Final)</title>
+    <title>Dragon's Treasure (Connected Final)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -483,8 +483,7 @@
         
         <div id="btn-turbo-toggle"></div>
 
-        <div id="ui-credit" class="value-text">100,000.00</div>
-        <div id="ui-win" class="value-text">0.00</div>
+        <div id="ui-credit" class="value-text">---</div> <div id="ui-win" class="value-text">0.00</div>
         <div id="ui-bet" class="value-text">100.00</div>
         <div id="ui-message-bar"><div id="msg-content">WIN 100.00</div></div>
         
@@ -667,7 +666,6 @@
     </script>
 
     <script>
-    /* ★ 改回 8.8 版穩定核心 + 支援 Direction (不含複雜防護) ★ */
     const CoinManager = {
         canvas: null, ctx: null, particles: [], isRunning: false,
         coinImg: new Image(), imgLoaded: false,
@@ -928,6 +926,35 @@
             });
         };
 
+        // ★★★ 數據連線監聽器 (Data Bridge) ★★★
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            // 接收來自 Lobby 的初始餘額
+            if (data.type === 'initBalance') {
+                gameData.credit = data.value;
+                updateAllUI();
+            } 
+            // 接收跑馬燈訊息 (可選)
+            else if (data.type === 'tickerMessage') {
+                const msgBar = document.getElementById('ui-message-bar');
+                const msgContent = document.getElementById('msg-content');
+                msgContent.innerText = data.msg;
+                msgContent.className = 'style-promo anim-scroll';
+                msgBar.style.display = 'flex';
+                setTimeout(() => { if (!isSpinning) msgBar.style.display = 'none'; }, 10000);
+            }
+        });
+
+        // ★★★ 發送餘額更新回 Lobby ★★★
+        function syncBalanceToLobby() {
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'updateBalance',
+                    value: gameData.credit
+                }, '*');
+            }
+        }
+
         document.getElementById('btn-start-game').addEventListener('click', () => {
             const loadingLayer = document.getElementById('loading-layer');
             loadingLayer.classList.add('hidden');
@@ -956,9 +983,13 @@
                 AudioMgr.playSFX('click');
                 document.getElementById('setting-modal').classList.add('active');
             });
+            // ★ 修改：Home 按鈕發送關閉訊號
             document.getElementById('btn-menu-home').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
                 document.getElementById('menu-modal').classList.remove('active');
+                if (window.parent) {
+                    window.parent.postMessage('closeGame', '*');
+                }
             });
             document.getElementById('btn-menu-close-bottom').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
@@ -1200,6 +1231,7 @@
 
             gameData.credit -= buyCost; 
             updateAllUI(); 
+            syncBalanceToLobby(); // ★ 同步餘額
             isBuyingFeature = true;
             isAutoPlay = false;
             updateAutoPlayButton(); 
@@ -1333,7 +1365,10 @@
             
             if (!gameData.isFreeGame) {
                 msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
-                if(!isBuyingFeature) { gameData.credit -= gameData.bet; }
+                if(!isBuyingFeature) { 
+                    gameData.credit -= gameData.bet; 
+                    syncBalanceToLobby(); // ★ 同步餘額
+                }
                 gameData.accumulatedMultiplier = 0; 
                 resetMultiplierUI(); 
                 gameData.currentWin = 0;
@@ -1777,7 +1812,13 @@
             isSpinning = false;
             document.getElementById('spin-icon').classList.remove('fast');
             if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
-            if(gameData.currentWin > 0) { gameData.credit += gameData.currentWin; gameData.currentWin = 0; updateAllUI(); }
+            
+            if(gameData.currentWin > 0) { 
+                gameData.credit += gameData.currentWin; 
+                gameData.currentWin = 0; 
+                updateAllUI(); 
+                syncBalanceToLobby(); // ★ 同步餘額
+            }
 
             if (isAutoPlay && !gameData.isFreeGame) {
                 if (gameData.credit >= gameData.bet) {
@@ -1932,6 +1973,7 @@
             document.getElementById('ui-message-bar').style.display = 'none';
             gameData.credit += gameData.currentWin; 
             gameData.currentWin = 0; 
+            syncBalanceToLobby(); // ★ 同步餘額
             isSpinning = false; 
             document.getElementById('spin-icon').classList.remove('fast');
             const bgVideo = document.getElementById('bg-video');
