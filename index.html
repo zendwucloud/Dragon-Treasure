@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> Dragon's Treasure(V13.106)</title>
+    <title> Dragon's Treasure (Final)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body {
@@ -95,14 +95,20 @@
 
         /* --- 遊戲內部 CSS --- */
         #bg-video {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: 0; filter: brightness(0.75);
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            transform: translate3d(0, 0, 0); 
+            will-change: transform;          
+            backface-visibility: hidden;     
+            filter: brightness(0.75);
             transition: filter 1.0s ease-in-out;
         }
         .free-mode #bg-video { filter: brightness(1.0); }
         .bg-highlight { filter: brightness(2.5) !important; transition: filter 1.0s ease-in !important; }
 
-        /* 火光特效 (混合模式 Overlay) */
         .fire-effect {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5; opacity: 0;
@@ -123,7 +129,6 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* --- 獨立黑色遮罩層 (Level 1) --- */
         #fg-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.7); 
@@ -133,14 +138,12 @@
         #fg-mask.active { opacity: 1; pointer-events: auto; }
         #fg-mask.fade-out { opacity: 0 !important; transition: opacity 1.0s ease-in-out !important; }
 
-        /* --- Canvas 金幣層 (Level 2) --- */
         #coin-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 2600; 
             pointer-events: none; 
         }
 
-        /* --- 按鈕參數 --- */
         .phone-button {
             position: absolute; left: 2%; top: 2%; width: 9%; 
             cursor: pointer; z-index: 950; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
@@ -190,7 +193,6 @@
         .ghost-layer { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0.001; z-index: -999; pointer-events: none; }
         .ghost-layer .sym-scatter.active { animation-play-state: running !important; }
 
-        /* WILD CSS */
         .sym-wild { 
             background-image: url('WILD.png'); 
             width: 115%; height: 100%; 
@@ -219,7 +221,6 @@
         @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
 
-        /* 一般符號動畫 */
         @keyframes symbolSpriteRun { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         .sym-1.active, .sym-2.active, .sym-3.active, .sym-4.active, .sym-5.active { background-image: none !important; background-size: 2800% 100%; background-position: 0% 0%; z-index: 500 !important; animation: symbolSpriteRun 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; will-change: background-position; }
         .sym-1.active { background-image: url('s1_sprite.png') !important; } 
@@ -228,7 +229,6 @@
         .sym-4.active { background-image: url('s4_sprite.png') !important; } 
         .sym-5.active { background-image: url('s5_sprite.png') !important; }
 
-        /* 龍眼倍數符號 */
         .sym-mul { 
             z-index: 180; 
             width: 125%; margin-left: -12.5%; 
@@ -266,10 +266,9 @@
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
         .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; }
 
-        /* ★ V13.103: 爆炸特效 (修正位置) ★ */
         .vfx-explosion {
             position: absolute; top: 50%; 
-            left: 42%; /* ★ 向左偏移修正 (視覺中心) ★ */
+            left: 42%; 
             width: 20vh; height: 20vh; 
             transform: translate(-50%, -50%);
             background-image: url('explosion_sprite.png');
@@ -285,7 +284,6 @@
             100% { background-position: 100% 0%; opacity: 0; }
         }
 
-        /* UI 文字 */
         .value-text { color: #fff; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 2px 2px 2px #000; position: absolute; z-index: 500; pointer-events: none; white-space: nowrap; }
         #ui-credit { bottom: 7.6%; left: 16%; transform: translateX(-50%); font-size: 2.2vh; text-align: center; }
         #ui-bet { bottom: 7.6%; right: 14%; transform: translateX(50%); font-size: 2.2vh; text-align: center; }
@@ -310,33 +308,31 @@
         #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
         #btn-plus { right: 33.4%; bottom: 8.8%; transform: translateX(50%); }
         
-        /* ★ V13.104: Auto Play Button (改用百分比定位/大小, 解決 RWD 問題) ★ */
         #btn-auto { 
             position: absolute; 
             left: 50%; 
             bottom: 7.5%; 
-            transform: translateX(-50%); /* 永遠水平置中 */
-            width: 16%;  /* 改用百分比寬度 */
-            height: 2.0%; /* 改用百分比高度 */
-            background-color: rgba(255, 0, 0, 0); /* 預設透明 */
+            transform: translateX(-50%);
+            width: 16%; 
+            height: 2.0%; 
+            background-color: rgba(255, 0, 0, 0);
             border: 0px solid red; 
             border-radius: 50%; 
             z-index: 1000; cursor: pointer; 
             transition: all 0.3s;
         }
         #btn-auto.active {
-            background-color: rgba(255, 215, 0, 0.5); /* 啟動時半透明黃色 */
+            background-color: rgba(255, 215, 0, 0.5); 
             box-shadow: 0 0 15px #ffd700;
             border: 2px solid #ffd700;
             border-radius: 10px; 
         }
         
-        /* ★ V13.104: Turbo Switch (改用百分比, 保持紅色方便除錯, 之後可改為 0.0) ★ */
         #btn-turbo-toggle {
             position: absolute;
             right: 20.0%; bottom: 12.0%; 
-            width: 7%; height: 4%; /* 改用百分比 */
-            background-color: rgba(255, 0, 0, 0); /* 紅色半透明除錯用 */
+            width: 7%; height: 4%; 
+            background-color: rgba(255, 0, 0, 0); 
             border-radius: 50%;
             z-index: 2000;
             cursor: pointer;
@@ -368,7 +364,7 @@
         #btn-menu-home { left: 52%; top: 23%; width: 13%; height: 9%; }
         #btn-menu-close-bottom { left: 38.5%; bottom: 1%; width: 23%; height: 5%; }
 
-        /* Info Modal (Restored V13.80 Style with Yellow Bars) */
+        /* Info Modal */
         #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         #info-modal.active { display: flex; opacity: 1; }
         .info-content { 
@@ -392,7 +388,6 @@
         .paytable-mul { color: #fff; font-weight: bold; }
         .paytable-val { color: #ffd700; text-align: right; text-shadow: 1px 1px 0 #000; }
         
-        /* 8.4 Style Special Blocks */
         .special-rule-block { grid-column: 1 / -1; background: linear-gradient(90deg, #2e004d 0%, #1a0b2e 100%); border: 2px solid #fff; border-radius: 12px; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding: 8px 12px; margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); min-height: 14vh; }
         .special-fixed-height { height: 14vh; }
         .special-img { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-right: 4%; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 2%; height: 100%; }
@@ -425,6 +420,31 @@
         .buy-actions { display: flex; justify-content: space-around; margin-top: 15px; }
         .buy-actions .close-btn { margin-top: 0; padding: 8px 20px; font-size: 1.8vh; }
 
+        /* --- 特效樣式 --- */
+        .vfx-breathing {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 2800; 
+            box-shadow: inset 0 0 50px 20px rgba(255, 0, 0, 0);
+            mix-blend-mode: screen;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .vfx-breathing.active { animation: redAlert 0.8s infinite alternate; opacity: 1; }
+        @keyframes redAlert {
+            0% { box-shadow: inset 0 0 30px 10px rgba(255, 0, 0, 0.2); background-color: rgba(255,0,0,0.05); }
+            100% { box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.8); background-color: rgba(255,0,0,0.2); }
+        }
+
+        .confetti {
+            position: absolute; top: -5%; width: 1.5vh; height: 1.5vh;
+            z-index: 2900; pointer-events: none;
+            animation: fallDown linear forwards;
+        }
+        @keyframes fallDown {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
     </style>
 </head>
 <body>
@@ -443,8 +463,8 @@
     </div>
 
     <div class="stage" id="game-stage">
-        <video id="bg-video" autoplay loop muted playsinline>
-            <source src="火龍背景_待機.mp4" type="video/mp4">
+        <video id="bg-video" autoplay loop muted playsinline webkit-playsinline>
+            <source src="bg.mp4" type="video/mp4">
         </video>
 
         <div class="ui-layer"></div>
@@ -485,7 +505,7 @@
 
         <div id="fg-end-modal">
             <div class="content-wrapper">
-                <img src="you-win.png" class="win-title">
+                <img src="you-win.png" class="win-title" id="fg-title-img">
                 <div id="fg-end-score">0.00</div>
             </div>
         </div>
@@ -647,201 +667,130 @@
     </script>
 
     <script>
-        const CoinManager = {
-            canvas: null,
-            ctx: null,
-            particles: [],
-            isRunning: false,
-            coinImg: new Image(),
-            imgLoaded: false,
+    /* ★ 改回 8.8 版穩定核心 + 支援 Direction (不含複雜防護) ★ */
+    const CoinManager = {
+        canvas: null, ctx: null, particles: [], isRunning: false,
+        coinImg: new Image(), imgLoaded: false,
 
-            init: function() {
-                this.canvas = document.getElementById('coin-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                this.coinImg.src = 'coin.png';
-                this.coinImg.onload = () => { this.imgLoaded = true; };
-            },
+        init: function() {
+            this.canvas = document.getElementById('coin-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.coinImg.src = 'coin.png';
+            this.coinImg.onload = () => { this.imgLoaded = true; };
+        },
 
-            resize: function() {
-                if(this.canvas) {
-                    this.canvas.width = this.canvas.offsetWidth;
-                    this.canvas.height = this.canvas.offsetHeight;
-                }
-            },
-
-            fire: function(amount) {
-                let count = 10; 
-                let sparkleCount = 5;
-
-                if (amount > gameData.bet * 5) { count = 20; sparkleCount = 10; }
-                if (amount > gameData.bet * 10) { count = 40; sparkleCount = 20; }
-
-                if (!this.isRunning) {
-                    this.isRunning = true;
-                    this.animate();
-                }
-
-                for (let i = 0; i < count; i++) {
-                    this.particles.push(this.createParticle('coin'));
-                }
-                for (let i = 0; i < sparkleCount; i++) {
-                    this.particles.push(this.createParticle('sparkle'));
-                }
-            },
-
-            createParticle: function(type) {
-                const w = this.canvas.width;
-                const h = this.canvas.height;
-                
-                if (type === 'coin') {
-                    return {
-                        type: 'coin',
-                        x: w / 2, 
-                        y: h + 50, 
-                        vx: (Math.random() - 0.5) * (w * 0.03), 
-                        vy: -(Math.random() * h * 0.025 + h * 0.015), 
-                        gravity: h * 0.0005,
-                        size: (Math.random() * 30 + 30) * (w / 720) * 3, 
-                        rotation: Math.random() * 360,
-                        rSpeed: (Math.random() - 0.5) * 10,
-                        flip: Math.random() * Math.PI, 
-                        flipSpeed: Math.random() * 0.2 + 0.1,
-                        isFlashing: false,
-                        flashTimer: 0,
-                        flashDuration: 30 // 約 0.5 秒 (60fps)
-                    };
-                } else {
-                    return {
-                        type: 'sparkle',
-                        x: w / 2 + (Math.random() - 0.5) * 50,
-                        y: h + 50,
-                        vx: (Math.random() - 0.5) * (w * 0.04),
-                        vy: -(Math.random() * h * 0.028 + h * 0.01),
-                        gravity: h * 0.0002,
-                        size: Math.random() * 5 + 2, 
-                        alpha: 1,
-                        decay: Math.random() * 0.02 + 0.01
-                    };
-                }
-            },
-
-            animate: function() {
-                if (!this.isRunning) return;
-                
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                for (let i = 0; i < this.particles.length; i++) {
-                    let p = this.particles[i];
-                    
-                    p.vy += p.gravity;
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    if (p.type === 'coin') {
-                        p.rotation += p.rSpeed;
-                        p.flip += p.flipSpeed;
-
-                        if (!p.isFlashing && Math.random() < 0.05) { // 5% 機率 (原本是 0.01)
-                            p.isFlashing = true;
-                            p.flashTimer = 0;
-                        }
-
-                        let brightness = 100; 
-                        if (p.isFlashing) {
-                            p.flashTimer++;
-                            let progress = p.flashTimer / p.flashDuration;
-                            brightness = 100 + 100 * Math.sin(progress * Math.PI);
-                            
-                            if (p.flashTimer >= p.flashDuration) {
-                                p.isFlashing = false; // 閃爍結束
-                            }
-                        }
-                        
-                        this.ctx.save();
-                        this.ctx.translate(p.x, p.y);
-                        this.ctx.rotate(p.rotation * Math.PI / 180);
-                        
-                        let scaleX = Math.cos(p.flip); 
-                        this.ctx.scale(scaleX, 1);
-                        
-                        if (brightness > 105) {
-                            this.ctx.filter = `brightness(${brightness}%)`;
-                        }
-
-                        if (this.imgLoaded) {
-                            this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
-                        } else {
-                            this.ctx.beginPath();
-                            this.ctx.arc(0, 0, p.size/2, 0, Math.PI * 2);
-                            this.ctx.fillStyle = '#ffd700';
-                            this.ctx.fill();
-                        }
-                        this.ctx.restore();
-                    } else {
-                        p.alpha -= p.decay;
-                        if(p.alpha <= 0) {
-                            this.particles.splice(i, 1);
-                            i--;
-                            continue;
-                        }
-                        this.ctx.save();
-                        this.ctx.globalAlpha = p.alpha;
-                        this.ctx.beginPath();
-                        this.ctx.fillStyle = (Math.random() > 0.5) ? '#ffffff' : '#ffff00'; 
-                        this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                        this.ctx.restore();
-                    }
-
-                    if (p.y > this.canvas.height + 100) {
-                        this.particles.splice(i, 1);
-                        i--;
-                    }
-                }
-
-                if (this.particles.length > 0) {
-                    requestAnimationFrame(() => this.animate());
-                } else {
-                    this.isRunning = false;
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                }
+        resize: function() {
+            if(this.canvas) {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
             }
-        };
+        },
+
+        fire: function(amount, originX = 0.5) { 
+            let count = (amount > 200) ? 50 : amount; 
+            if (amount < 5) count = 20; 
+
+            let sparkleCount = Math.floor(count / 2);
+
+            if (!this.isRunning) { this.isRunning = true; this.animate(); }
+
+            for (let i = 0; i < count; i++) {
+                this.particles.push(this.createParticle('coin', originX));
+            }
+            for (let i = 0; i < sparkleCount; i++) {
+                this.particles.push(this.createParticle('sparkle', originX));
+            }
+        },
+
+        createParticle: function(type, originX = 0.5) {
+            const w = this.canvas.width; const h = this.canvas.height;
+            const startX = w * originX; 
+            
+            if (type === 'coin') {
+                return {
+                    type: 'coin',
+                    x: startX, 
+                    y: h + 50, 
+                    vx: (Math.random() - 0.5 + (0.5 - originX)) * (w * 0.04), 
+                    vy: -(Math.random() * h * 0.025 + h * 0.015), 
+                    gravity: h * 0.0005,
+                    size: (Math.random() * 30 + 30) * (w / 720) * 3, 
+                    rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 10,
+                    flip: Math.random() * Math.PI, flipSpeed: Math.random() * 0.2 + 0.1,
+                    isFlashing: false, flashTimer: 0, flashDuration: 30
+                };
+            } else {
+                return {
+                    type: 'sparkle',
+                    x: startX + (Math.random() - 0.5) * 50,
+                    y: h + 50,
+                    vx: (Math.random() - 0.5) * (w * 0.04),
+                    vy: -(Math.random() * h * 0.028 + h * 0.01),
+                    gravity: h * 0.0002,
+                    size: Math.random() * 5 + 2, alpha: 1, decay: Math.random() * 0.02 + 0.01
+                };
+            }
+        },
+
+        animate: function() {
+            if (!this.isRunning) return;
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            for (let i = 0; i < this.particles.length; i++) {
+                let p = this.particles[i];
+                p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
+
+                if (p.type === 'coin') {
+                    p.rotation += p.rSpeed; p.flip += p.flipSpeed;
+                    if (!p.isFlashing && Math.random() < 0.05) { p.isFlashing = true; p.flashTimer = 0; }
+                    let brightness = 100;
+                    if (p.isFlashing) {
+                        p.flashTimer++;
+                        let progress = p.flashTimer / p.flashDuration;
+                        brightness = 100 + 100 * Math.sin(progress * Math.PI);
+                        if (p.flashTimer >= p.flashDuration) p.isFlashing = false;
+                    }
+                    this.ctx.save(); this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate(p.rotation * Math.PI / 180);
+                    this.ctx.scale(Math.cos(p.flip), 1);
+                    if (brightness > 105) this.ctx.filter = `brightness(${brightness}%)`;
+                    if (this.imgLoaded) this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
+                    else { this.ctx.beginPath(); this.ctx.arc(0, 0, p.size/2, 0, Math.PI*2); this.ctx.fillStyle='#ffd700'; this.ctx.fill(); }
+                    this.ctx.restore();
+                } else {
+                    p.alpha -= p.decay;
+                    if(p.alpha <= 0) { this.particles.splice(i, 1); i--; continue; }
+                    this.ctx.save(); this.ctx.globalAlpha = p.alpha;
+                    this.ctx.beginPath(); this.ctx.fillStyle = (Math.random()>0.5)?'#ffffff':'#ffff00'; 
+                    this.ctx.fillRect(p.x, p.y, p.size, p.size); this.ctx.restore();
+                }
+                if (p.y > this.canvas.height + 100) { this.particles.splice(i, 1); i--; }
+            }
+            if (this.particles.length > 0) requestAnimationFrame(() => this.animate());
+            else { this.isRunning = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+        }
+    };
     </script>
 
     <script>
         const config = { cols: 5, rows: 3 }; 
         
-        /* ★ V13.120: 最終修正版 (FG無爛牌 + 賠率80% + 倍數路障) ★ */
         const SYMBOLS = {
-            /* --- 高分符號 (依據圖片數值再打8折) --- */
-            /* 原本 100 -> 80 */
             1:  { type: 'high', payouts: {3: 4.0, 4: 20.0, 5: 80.0}, weight: 2.5, inBase: true, inFree: true },
-            /* 原本 75 -> 60 */
             2:  { type: 'high', payouts: {3: 3.2, 4: 16.0, 5: 60.0}, weight: 4.0, inBase: true, inFree: true },
-            /* 原本 50 -> 40 */
             3:  { type: 'high', payouts: {3: 2.0, 4: 10.0, 5: 40.0}, weight: 5.5, inBase: true, inFree: true },
-            
-            /* --- 中分符號 (打8折) --- */
-            /* 原本 25 -> 20 */
             4:  { type: 'mid',  payouts: {3: 1.2, 4: 6.0,  5: 20.0}, weight: 12, inBase: true, inFree: true },
-            /* 原本 25 -> 20 */
             5:  { type: 'mid',  payouts: {3: 1.2, 4: 6.0,  5: 20.0}, weight: 12, inBase: true, inFree: true },
-            
-            /* --- 低分符號 (FG 模式將被移除) --- */
-            /* 低分符號維持原樣或微調，因為 FG 不會出現，對 FG RTP 無影響 */
             6:  { type: 'low',  payouts: {3: 0.5, 4: 2.5, 5: 10},  weight: 65, inBase: true, inFree: false },
             7:  { type: 'low',  payouts: {3: 0.5, 4: 2.5, 5: 10},  weight: 65, inBase: true, inFree: false },
             8:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             9:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
-            
-            /* --- 特殊符號 --- */
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
-            11: { type: 'scatter', weight: 4.2, inBase: true, inFree: true }, 
             
-            /* --- 龍眼倍數 --- */
+            // ★ [9.2最終修正] SCATTER 權重調降至 4.85，達成 96.49% RTP
+            11: { type: 'scatter', weight: 4.85, inBase: true, inFree: true }, 
+
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
             21: { type: 'mul', val: 10,  weight: 0, inBase: false, inFree: true }, 
             22: { type: 'mul', val: 25,  weight: 0, inBase: false, inFree: true }, 
@@ -850,6 +799,11 @@
 
         let poolBase = []; 
         let poolFree = []; 
+        
+        // ★ 9.2版 分軸權重核心變數
+        let poolsFreeByReel = [[], [], [], [], []]; 
+        let totalWeightsFreeByReel = [0, 0, 0, 0, 0];
+        
         let totalWeightBase = 0; 
         let totalWeightFree = 0;
         let isBuyingFeature = false; 
@@ -857,10 +811,7 @@
         let firstInteraction = false;
         
         let isAutoPlay = false;
-        
-        /* ★ V13.92: 極速模式開關 ★ */
         let isTurboMode = false;
-        /* ★ V13.91: 急停狀態變數 ★ */
         let isQuickStop = false;
 
         function initBasePool() {
@@ -877,73 +828,64 @@
         }
         initBasePool(); 
 
-        /* ★ V13.120: 權重平衡 (No Trash, More Multipliers) ★ */
+        // ★ [9.2版] 分軸阻斷權重邏輯
         function updateFreeGameWeights(scatterCount) {
-            poolFree = [];
-            totalWeightFree = 0;
-            
-            // ★ 修改：稍微減少符號總額 (600 -> 550)，增加倍數總額 (400 -> 450)
-            // 這樣倍數出現率接近 45%，能有效阻斷連線
-            const symbolQuota = 600; 
-            const multiplierQuota = 400; 
+            poolsFreeByReel = [[], [], [], [], []];
+            totalWeightsFreeByReel = [0, 0, 0, 0, 0];
 
-            // 嚴格遵守：只留 1~5 (High/Mid) 和 10, 11
+            const symbolQuota = 3600; 
+            const baseMultiplierQuota = 800; // 提高總量基數，強化阻斷感
+
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            
-            let ratios = {
-                1: 4,   // 紅龍極稀有
-                2: 8,
-                3: 12,
-                4: 80,  // 版面主力
-                5: 80,  // 版面主力
-                10: 4,  // ★ 關鍵：Wild 再降一點 (5->3)，這是控制 RTP 的殺手鐧
-                11: 2   
-            };
-
+            // S4/S5 機率拉高至 35% (1400/4000)
+            let ratios = { 1: 100, 2: 200, 3: 300, 4: 1400, 5: 1400, 10: 142, 11: 30 };
             let ratioSum = 0;
             for(let id in ratios) ratioSum += ratios[id];
 
-            connectableSymbols.forEach(id => {
-                let w = (ratios[id] / ratioSum) * symbolQuota;
-                if (scatterCount === 3 && id === 10) w *= 1.2; 
-                poolFree.push({ id: id, weight: w });
-                totalWeightFree += w;
-            });
+            for (let c = 0; c < 5; c++) {
+                // --- A. 計算普通符號權重 ---
+                connectableSymbols.forEach(id => {
+                    let w = (ratios[id] / ratioSum) * symbolQuota;
+                    if (scatterCount === 3 && id === 10) w *= 1.2; 
+                    poolsFreeByReel[c].push({ id: id, weight: w });
+                    totalWeightsFreeByReel[c] += w;
+                });
 
-            // 倍數分配 (大量 x2 當作路障)
-            let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
-            
-            if (scatterCount === 3) {
-                w2 = multiplierQuota * 0.92; // 絕大多數是 x2
-                w10 = multiplierQuota * 0.08;
-            } else if (scatterCount === 4) {
-                w2 = multiplierQuota * 0.70; 
-                w10 = multiplierQuota * 0.28; 
-                w25 = multiplierQuota * 0.02;
-            } else {
-                w2 = multiplierQuota * 0.50; 
-                w10 = multiplierQuota * 0.40; 
-                w25 = multiplierQuota * 0.09; 
-                w100 = multiplierQuota * 0.01; 
+                // --- B. 計算分軸龍眼權重 (前三軸阻斷) ---
+                let reelMulBoost = 1.0;
+                if (c === 0) reelMulBoost = 3.5;      // 第 1 軸龍眼爆多 (阻斷起手)
+                else if (c === 1) reelMulBoost = 2.0; // 第 2 軸龍眼增多
+                else if (c === 2) reelMulBoost = 1.5; // 第 3 軸龍眼稍微增多
+                else reelMulBoost = 0.5;              // 後兩軸龍眼變少
+
+                let currentReelMulQuota = baseMultiplierQuota * reelMulBoost;
+
+                let w2 = 0, w10 = 0, w25 = 0, w100 = 0;
+                if (scatterCount === 3) { 
+                    w2 = currentReelMulQuota * 0.95; w10 = currentReelMulQuota * 0.05; 
+                } else if (scatterCount === 4) { 
+                    w2 = currentReelMulQuota * 0.80; w10 = currentReelMulQuota * 0.15; w25 = currentReelMulQuota * 0.05; 
+                } else { 
+                    w2 = currentReelMulQuota * 0.60; w10 = currentReelMulQuota * 0.25; w25 = currentReelMulQuota * 0.10; w100 = currentReelMulQuota * 0.05; 
+                }
+
+                if (w2 > 0) { poolsFreeByReel[c].push({ id: 20, weight: w2 }); totalWeightsFreeByReel[c] += w2; }
+                if (w10 > 0) { poolsFreeByReel[c].push({ id: 21, weight: w10 }); totalWeightsFreeByReel[c] += w10; }
+                if (w25 > 0) { poolsFreeByReel[c].push({ id: 22, weight: w25 }); totalWeightsFreeByReel[c] += w25; }
+                if (w100 > 0) { poolsFreeByReel[c].push({ id: 23, weight: w100 }); totalWeightsFreeByReel[c] += w100; }
             }
-
-            if (w2 > 0) { poolFree.push({ id: 20, weight: w2 }); totalWeightFree += w2; }
-            if (w10 > 0) { poolFree.push({ id: 21, weight: w10 }); totalWeightFree += w10; }
-            if (w25 > 0) { poolFree.push({ id: 22, weight: w25 }); totalWeightFree += w25; }
-            if (w100 > 0) { poolFree.push({ id: 23, weight: w100 }); totalWeightFree += w100; }
         }
 
         let gameData = { credit: 100000, bet: 100, currentWin: 0, isFreeGame: false, freeSpinsLeft: 0, accumulatedMultiplier: 0 };
         let gridData = []; let isSpinning = false; let score = 0; 
         let promoInterval = null;
 
-        // ★ 新增：資源預載邏輯 (Loader)
         window.onload = () => {
             const imageAssets = [
                 "SCATTER_sprite.png", "dragon_sprite.png", "eye_sprite.png",
                 "s1_sprite.png", "s2_sprite.png", "s3_sprite.png", "s4_sprite.png", "s5_sprite.png",
                 "x2_word.png", "x10_word.png", "x25_word.png", "x100_word.png",
-                "you-win.png", "phone.png", "gui-top.png", "spin.png",
+                "you-win.png", "max-win.png", "phone.png", "gui-top.png", "spin.png",
                 "background.jpg", "UI.png", "buy_btn.png", "SCATTER.png", "WILD.png", "WILD_word.png", "SCATTER_word.png",
                 "s1.png", "s2.png", "s3.png", "s4.png", "s5.png", "s6.png", "s7.png", "s8.png", "s9.png",
                 "x2.png", "x10.png", "x25.png", "x100.png", "loading.jpg", "coin.png", "explosion_sprite.png"
@@ -970,7 +912,6 @@
                 }
             };
 
-            // 載入圖片
             imageAssets.forEach(src => {
                 const img = new Image();
                 img.onload = updateProgress;
@@ -978,42 +919,28 @@
                 img.src = src;
             });
 
-            // 載入音效 (簡單請求)
             audioAssets.forEach(src => {
                 const aud = new Audio();
                 aud.oncanplaythrough = updateProgress;
                 aud.onerror = updateProgress;
                 aud.src = src;
-                // 有些瀏覽器不預載 Audio，為了不卡死，我們設個 timeout 強制完成
                 setTimeout(updateProgress, 2000); 
             });
         };
 
-        // ★ 新增：點擊開始遊戲按鈕 (解鎖音效 + 進入遊戲)
         document.getElementById('btn-start-game').addEventListener('click', () => {
-            // 1. 隱藏 Loading 層
             const loadingLayer = document.getElementById('loading-layer');
             loadingLayer.classList.add('hidden');
             setTimeout(() => loadingLayer.style.display = 'none', 500);
-
-            // 2. 顯示遊戲舞台
             document.getElementById('game-stage').classList.add('loaded');
-
-            // 3. 初始化音效 (這是解鎖的關鍵！)
             AudioMgr.init();
-            
-            // 4. 初始化金幣系統
             CoinManager.init();
-
-            // 5. 執行原本的遊戲初始化
             initGameLogic();
         });
 
-        // 將原本的 window.onload 裡的邏輯移到這裡
         function initGameLogic() {
             initGrid(); 
-            // fillRandom(false); // 原本是依照權重 (低分符號多)
-            fillInitialVisuals(); // ★ 改用新的平均隨機填充 (視覺效果較好)
+            fillInitialVisuals(); 
             updateAllUI(); 
             
             document.getElementById('btn-phone').addEventListener('click', () => {
@@ -1050,7 +977,6 @@
                 AudioMgr.toggle(e.target.checked);
             });
 
-            // 購買視窗按鈕
             document.getElementById('btn-buy-cancel').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
                 document.getElementById('buy-modal').classList.remove('active');
@@ -1073,7 +999,6 @@
                 startSpin();
             });
             
-            /* ★ V13.92: 綁定極速按鈕事件 (Toggle) ★ */
             document.getElementById('btn-turbo-toggle').addEventListener('click', () => {
                 isTurboMode = !isTurboMode;
                 const btn = document.getElementById('btn-turbo-toggle');
@@ -1081,14 +1006,13 @@
                 else btn.classList.remove('active');
             });
             
-            /* ★ V13.94: 綁定 AutoPlay 按鈕事件 (Toggle) ★ */
             document.getElementById('btn-auto').addEventListener('click', (e) => {
                 handleFirstInteraction();
                 e.stopPropagation(); 
                 if (isSpinning || gameData.isFreeGame) return;
 
                 isAutoPlay = !isAutoPlay; 
-                updateAutoPlayButton(); // V13.94 更新 UI
+                updateAutoPlayButton(); 
 
                 if(isAutoPlay) {
                     AudioMgr.playSFX('click');
@@ -1099,7 +1023,7 @@
             document.addEventListener('click', (e) => {
                 if (isAutoPlay && e.target.id !== 'btn-auto') {
                     isAutoPlay = false;
-                    updateAutoPlayButton(); // V13.94 更新 UI
+                    updateAutoPlayButton(); 
                 }
             }, true); 
 
@@ -1118,33 +1042,23 @@
             showPromoMessage(); startPromoLoop();
         }
 
-/* ★ V13.106: 新增初始畫面填充函式 (平均分佈，不含龍眼，純展示用) ★ */
         function fillInitialVisuals() {
-            // 定義要出現的符號 ID (1-9:一般, 10:Wild, 11:Scatter)
-            // 不包含 20, 21, 22, 23 (龍眼)，這樣初始盤面就不會有龍眼
             const displayPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
             
             for(let c=0; c<config.cols; c++) {
-    const colDiv = document.getElementById(`col-${c}`); 
-    gridData[c] = []; 
-    colDiv.innerHTML = '';
-    
-    for(let r=0; r<config.rows; r++) {
-        let type;
-        // ★ 強制迴圈重抽，直到符合規則
-        while(true) {
-            let randIndex = Math.floor(Math.random() * displayPool.length);
-            type = displayPool[randIndex];
-            
-            // 規則：第 1 軸 (c===0) 不能有 WILD (10)
-            if (c === 0 && type === 10) continue; 
-            
-            break;
-        }
-                    
+                const colDiv = document.getElementById(`col-${c}`); 
+                gridData[c] = []; 
+                colDiv.innerHTML = '';
+                
+                for(let r=0; r<config.rows; r++) {
+                    let type;
+                    while(true) {
+                        let randIndex = Math.floor(Math.random() * displayPool.length);
+                        type = displayPool[randIndex];
+                        if (c === 0 && type === 10) continue; 
+                        break;
+                    }
                     gridData[c].push(type);
-                    
-                    // 建立 DOM (不加動畫，靜態顯示)
                     let el = createSymbol(type); 
                     el.setAttribute('data-row', r);
                     colDiv.appendChild(el);
@@ -1152,14 +1066,12 @@
             }
         }
 
-        /* ★ V13.94: Auto Play UI 更新函式 ★ */
         function updateAutoPlayButton() {
             const btn = document.getElementById('btn-auto');
             if(isAutoPlay) btn.classList.add('active');
             else btn.classList.remove('active');
         }
 
-        /* ★ V13.98: 完美還原 8.4 版說明頁 (含黃色粗線規則) ★ */
         function generatePaytable() {
             const container = document.getElementById('paytable-container');
             container.innerHTML = '';
@@ -1180,7 +1092,6 @@
                 container.innerHTML += html;
             }
 
-            // WILD Block (Red Gradient)
             let wildHtml = `
             <div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);">
                 <div class="special-img">
@@ -1197,7 +1108,6 @@
             </div>`;
             container.innerHTML += wildHtml;
 
-            // SCATTER Block (Blue Gradient)
             let scatterHtml = `
             <div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
                 <div class="special-img">
@@ -1219,7 +1129,6 @@
             </div>`;
             container.innerHTML += scatterHtml;
 
-            // Dragon/Mul Block (Gold Gradient)
             let dragonHtml = `
             <div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);">
                 <div class="special-img">
@@ -1247,7 +1156,6 @@
             </div>`;
             container.innerHTML += dragonHtml;
             
-            // ★ V13.98: Game Rules Block (Green Title + Yellow Bars) ★
             let rulesHtml = `
             <div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;">
                 <div class="info-title" style="font-size:2.2vh; margin-bottom:10px; color:#7cfc00;">★ 遊戲規則 ★</div>
@@ -1275,11 +1183,9 @@
             }
         }
 
-        // 修改後的開啟視窗函式
         function buyFeature() {
             if (isSpinning || gameData.isFreeGame) return;
-            /* ★ V13.86: 修正為 150倍 ★ */
-            const buyCost = gameData.bet * 150;
+            const buyCost = gameData.bet * 200;
             if (gameData.credit < buyCost) { 
                 alert(`點數不足！購買特色遊戲需要: ${buyCost.toLocaleString()}`); 
                 return; 
@@ -1288,17 +1194,15 @@
             document.getElementById('buy-modal').classList.add('active');
         }
 
-        // 真正的購買執行函式 (由 "確定購買" 按鈕觸發)
         async function executeBuy() {
-            /* ★ V13.105: 修正為 150倍 ★ */
-            const buyCost = gameData.bet * 150;
+            const buyCost = gameData.bet * 200;
             if (gameData.credit < buyCost) return;
 
             gameData.credit -= buyCost; 
             updateAllUI(); 
             isBuyingFeature = true;
             isAutoPlay = false;
-            updateAutoPlayButton(); // V13.94 確保 UI 更新
+            updateAutoPlayButton(); 
 
             await new Promise(r => requestAnimationFrame(r));
             await new Promise(r => setTimeout(r, 100)); 
@@ -1324,14 +1228,10 @@
         function showTriggerMessage(spins) {
             const msgBar = document.getElementById('ui-message-bar');
             const msgContent = document.getElementById('msg-content');
-            
             msgBar.style.display = 'flex';
             msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`;
             msgContent.className = 'style-blue anim-pop'; 
-            
-            setTimeout(() => {
-                msgBar.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { msgBar.style.display = 'none'; }, 3000);
         }
 
         function showPromoMessage() {
@@ -1368,13 +1268,31 @@
             }
         }
 
-        function getWeightedSymbol() {
-            let usePool = gameData.isFreeGame ? poolFree : poolBase;
-            let useTotal = gameData.isFreeGame ? totalWeightFree : totalWeightBase;
-            if (gameData.isFreeGame && usePool.length === 0) return 1;
-            let r = Math.random() * useTotal; let sum = 0;
-            for (let item of usePool) { sum += item.weight; if (r <= sum) return item.id; }
-            return gameData.isFreeGame ? 1 : 9; 
+        // ★ [9.2版] 支援分軸索引的取樣函數
+        function getWeightedSymbol(reelIndex = 0) {
+            if (gameData.isFreeGame) {
+                // 使用分軸權重池
+                let usePool = poolsFreeByReel[reelIndex];
+                let useTotal = totalWeightsFreeByReel[reelIndex];
+                if (!usePool || usePool.length === 0) return 1;
+                
+                let r = Math.random() * useTotal; 
+                let sum = 0;
+                for (let item of usePool) { 
+                    sum += item.weight; 
+                    if (r <= sum) return item.id; 
+                }
+                return 1;
+            } else {
+                // 一般模式維持原樣
+                let r = Math.random() * totalWeightBase; 
+                let sum = 0;
+                for (let item of poolBase) { 
+                    sum += item.weight; 
+                    if (r <= sum) return item.id; 
+                }
+                return 9; 
+            }
         }
 
         function initGrid() {
@@ -1393,20 +1311,6 @@
             else if (type >= 20) div.className = `symbol sym-mul sym-${type}`; 
             else { div.className = `symbol sym-${type}`; div.style.backgroundImage = `url('s${type}.png')`; }
             return div;
-        }
-
-        function fillRandom(animate) {
-            for(let c=0; c<config.cols; c++) {
-                const colDiv = document.getElementById(`col-${c}`); gridData[c] = []; colDiv.innerHTML = '';
-                for(let r=0; r<config.rows; r++) {
-                    let type = getWeightedSymbol();
-                    if (!type) type = 1; 
-                    gridData[c].push(type);
-                    let el = createSymbol(type); el.setAttribute('data-row', r);
-                    if(animate) { el.style.animation = `landBounce 0.4s ease-out forwards`; el.style.animationDelay = `${c*0.1 + r*0.05}s`; }
-                    colDiv.appendChild(el);
-                }
-            }
         }
 
         async function startSpin() {
@@ -1440,14 +1344,12 @@
             
             score = 0; updateAllUI(); 
 
-            /* ★ V13.116: 預先生成結果 (每軸限 1 顆 WILD) ★ */
             let finalGridData = []; 
 
             for(let c=0; c<config.cols; c++) {
                 finalGridData[c] = [];
-                let hasWildInCol = false; // ★ 標記：這一軸是否已經有 Wild 了
+                let hasWildInCol = false; 
 
-                // 處理購買特色遊戲的強制 Scatter
                 let forcedScatterRows = new Set();
                 if (isBuyingFeature) {
                     let hasScatter = false;
@@ -1458,28 +1360,21 @@
                 }
 
                 for(let r=0; r<config.rows; r++) {
-    let type;
-    if (forcedScatterRows.has(r)) {
-        type = 11;
-    } else {
-        // ★ 使用 while 迴圈確保抽出的符號合規
-        while(true) {
-            type = getWeightedSymbol();
-            
-            // [規則1] 第 1 軸 (c===0) 絕對不能出現 WILD (10)
-            if (c === 0 && type === 10) continue;
-
-            // [規則2] FG 模式下，每軸只能有 1 顆 Wild (原本的邏輯)
-            if (gameData.isFreeGame && type === 10) {
-                if (hasWildInCol) {
-                    continue; // 這一軸已經有 Wild 了，重抽
-                }
-                hasWildInCol = true; // 標記這一軸已有 Wild
-            }
-            
-            break; // 符合所有規則，跳出
-        }
-    }
+                    let type;
+                    if (forcedScatterRows.has(r)) {
+                        type = 11;
+                    } else {
+                        while(true) {
+                            // ★ 修正：這裡傳入 c，BaseGame 雖然用不到但傳入無妨
+                            type = getWeightedSymbol(c);
+                            if (c === 0 && type === 10) continue;
+                            if (gameData.isFreeGame && type === 10) {
+                                if (hasWildInCol) continue; 
+                                hasWildInCol = true; 
+                            }
+                            break; 
+                        }
+                    }
                     finalGridData[c].push(type);
                 }
             }
@@ -1496,10 +1391,10 @@
 
                     let fillerSyms = []; 
                     for(let i=0; i<6; i++) {
-                        fillerSyms.push(getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()); 
+                        // ★ 修正重點：這裡必須傳入 (c)，否則 FG 模式會壞掉
+                        fillerSyms.push(getWeightedSymbol(c), getWeightedSymbol(c), getWeightedSymbol(c)); 
                     } 
                     
-                    // 使用預先生成的結果
                     let targetSyms = finalGridData[c];
                     gridData[c] = targetSyms;
 
@@ -1558,7 +1453,6 @@
             let tempMulCoords = []; 
             let spinMultipliers = 0;
 
-            // 1. 先計算畫面上的龍眼倍數總合
             for(let c=0; c<config.cols; c++) {
                 for(let r=0; r<config.rows; r++) {
                     let id = gridData[c][r];
@@ -1569,24 +1463,21 @@
                 }
             }
 
-            // 2. 針對每一個符號ID進行連線判定
             for(let targetId=1; targetId<=9; targetId++) {
-                // 如果是免費遊戲，忽略低分符號 (6,7,8,9)
                 if(gameData.isFreeGame && targetId >= 6) continue;
 
                 let consecutiveCols = 0; 
-                let currentWayCount = 1; // ★ 新增：路數乘積 (預設為1)
+                let currentWayCount = 1; 
                 let tempMatches = [];
-                let hasConnectionBreak = false; // 用來標記連線是否斷掉
+                let hasConnectionBreak = false; 
 
                 for(let c=0; c<config.cols; c++) {
-                    if (hasConnectionBreak) break; // 斷掉就不用看後面卷軸了
+                    if (hasConnectionBreak) break; 
 
-                    let countOnReel = 0; // ★ 新增：計算這一軸有幾個能用的符號
+                    let countOnReel = 0; 
                     
                     for(let r=0; r<config.rows; r++) {
                         let id = gridData[c][r];
-                        // 檢查是否為目標符號 或 WILD (ID 10)
                         if(id === targetId || id === 10) { 
                             countOnReel++; 
                             tempMatches.push(`${c},${r}`); 
@@ -1595,54 +1486,40 @@
 
                     if(countOnReel > 0) {
                         consecutiveCols++;
-                        currentWayCount *= countOnReel; // ★ 核心邏輯：路數相乘 (例如 2個 * 3個 * 1個...)
+                        currentWayCount *= countOnReel; 
                     } else {
-                        hasConnectionBreak = true; // 這一軸沒符號，連線中斷
+                        hasConnectionBreak = true; 
                     }
                 }
 
-                // 3. 結算該符號獎金
                 if(consecutiveCols >= 3) {
-
-    /* ====== [插入這段] 開始 ====== */
-    // 防止純 WILD 連線重複領取多個符號的獎金
-    let allWilds = true;
-    for(let coord of tempMatches) {
-        let [mc, mr] = coord.split(',').map(Number);
-        if (mc < consecutiveCols) { 
-            if (gridData[mc][mr] !== 10) {
-                allWilds = false;
-                break;
-            }
-        }
-    }
-    // 如果是全 WILD 連線，且現在算的不是 1 號 (最高分符號)，就跳過不給錢！
-    if (allWilds && targetId !== 1) {
-        continue; 
-    }
+                    let allWilds = true;
+                    for(let coord of tempMatches) {
+                        let [mc, mr] = coord.split(',').map(Number);
+                        if (mc < consecutiveCols) { 
+                            if (gridData[mc][mr] !== 10) {
+                                allWilds = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (allWilds && targetId !== 1) {
+                        continue; 
+                    }
                     let payout = SYMBOLS[targetId].payouts[consecutiveCols];
                     if(payout) {
-                        // ★ 修正獎金公式：賠率 * 單注(bet/20) * 路數(Ways)
-                        // 假設下注 100，單注是 5。
-                        // 如果全盤 (243路)，且賠率是 30，那就是 30 * 5 * 243 = 36,450
                         roundScore += payout * (gameData.bet / 20) * currentWayCount; 
-                        
-                        // 將中獎座標加入總集合，用於播放動畫
                         tempMatches.forEach(key => { 
                             let [mc, mr] = key.split(',').map(Number); 
-                            // 只將有效連線範圍內的符號加入 (例如連線3軸，第4軸的符號就不算)
                             if(mc < consecutiveCols) matches.add(key); 
                         });
                     }
                 }
             }
 
-            // --- 下面邏輯保持不變 (SCATTER 判定與動畫處理) ---
-
             let scatterCount = 0;
             for(let c=0; c<config.cols; c++) { for(let r=0; r<config.rows; r++) { if(gridData[c][r] === 11) scatterCount++; } }
 
-            // 觸發 Scatter 動畫
             if (scatterCount >= 3 && !gameData.isFreeGame) {
                 for(let c=0; c<config.cols; c++) {
                     for(let r=0; r<config.rows; r++) {
@@ -1659,7 +1536,6 @@
                 }
             }
 
-            // 有贏分
             if (matches.size > 0) { 
                 tempMulCoords.forEach(key => matches.add(key));
                 
@@ -1671,16 +1547,78 @@
 
                 let finalWin = roundScore * totalMul; 
                 gameData.currentWin += finalWin; 
+
+                /* ★★★★★ [Max Win 保護機制] ★★★★★ */
+                const MAX_PAYOUT_MULTIPLIER = 15000; 
+                const MAX_WIN_AMOUNT = gameData.bet * MAX_PAYOUT_MULTIPLIER;
+                
+                if (gameData.currentWin >= MAX_WIN_AMOUNT) {
+                    gameData.currentWin = MAX_WIN_AMOUNT;
+                    updateAllUI(); 
+                    
+                    const modal = document.getElementById('fg-end-modal');
+                    const scoreEl = document.getElementById('fg-end-score');
+                    const mask = document.getElementById('fg-mask');
+                    const titleImg = document.getElementById('fg-title-img');
+
+                    if(titleImg) titleImg.src = 'max-win.png';
+
+                    if(scoreEl) scoreEl.innerText = gameData.currentWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+                    mask.classList.add('active');
+                    modal.classList.add('active');
+
+                    AudioMgr.playSFX('scatter'); 
+                    AudioMgr.playSFX('bigWin'); 
+
+                    let breath = document.querySelector('.vfx-breathing');
+                    if(!breath) {
+                        breath = document.createElement('div');
+                        breath.className = 'vfx-breathing';
+                        document.querySelector('.stage').appendChild(breath);
+                    }
+                    breath.classList.add('active');
+
+                    for(let i=0; i<100; i++) { setTimeout(spawnConfetti, i * 20); }
+
+                    let fountain = setInterval(() => {
+                        CoinManager.fire(150, 0.1); 
+                        CoinManager.fire(150, 0.5); 
+                        CoinManager.fire(150, 0.9); 
+                    }, 200);
+
+                    await wait(8000); 
+                    
+                    clearInterval(fountain);
+                    breath.classList.remove('active');
+                    
+                    modal.style.transition = 'opacity 0.5s';
+                    mask.style.transition = 'opacity 0.5s';
+                    modal.style.opacity = '0';
+                    mask.style.opacity = '0';
+                    
+                    await wait(500); 
+
+                    modal.classList.remove('active');
+                    mask.classList.remove('active');
+                    modal.style.opacity = '';
+                    mask.style.opacity = '';
+                    modal.style.transition = '';
+                    mask.style.transition = '';
+                    
+                    if(titleImg) titleImg.src = 'you-win.png';
+
+                    endSpin(); 
+                    return; 
+                }
+
                 updateAllUI(); 
                 triggerWinAnimation(); 
                 showWinMessage(gameData.currentWin);
 
-                // 音效邏輯
                 if (gameData.isFreeGame) AudioMgr.playSFX('winFree');
                 else if (finalWin > gameData.bet * 10) AudioMgr.playSFX('bigWin');
                 else AudioMgr.playSFX('win');
 
-                // 龍叫聲
                 let hasWildWin = false;
                 matches.forEach(key => {
                     let [c, r] = key.split(',');
@@ -1688,7 +1626,6 @@
                 });
                 if (hasWildWin) AudioMgr.playSFX('dragon');
 
-                // 贏分動畫
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = getSymbolEl(c, r);
                     if(el) {
@@ -1702,7 +1639,6 @@
 
                 await wait(2000); 
 
-                // 消除與爆炸
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = getSymbolEl(c, r);
                     if(el) { 
@@ -1718,7 +1654,6 @@
                 
                 await doRefill(matches); 
 
-                // 消除後檢查 SCATTER (可能掉下來新的湊齊3個)
                 let currentScatterCount = 0;
                 for(let c=0; c<config.cols; c++) {
                     for(let r=0; r<config.rows; r++) {
@@ -1735,7 +1670,6 @@
                 }
 
             } else {
-                // 沒贏分，檢查是否進入 FG 或結束
                 if (scatterCount >= 3 && !gameData.isFreeGame) {
                     AudioMgr.playSFX('scatter');
                     document.querySelectorAll('.sym-scatter').forEach(el => {
@@ -1774,57 +1708,74 @@
         async function doRefill(matches) {
             let hasRefill = false;
             for(let c=0; c<config.cols; c++) {
-                let oldColData = gridData[c]; let survivors = [];
-                for(let r=0; r<oldColData.length; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); }
+                let oldColData = gridData[c]; 
+                let survivors = [];
+                for(let r=0; r<oldColData.length; r++) { 
+                    if(!matches.has(`${c},${r}`)) survivors.push({ type: oldColData[r], oldR: r }); 
+                }
+                
                 if(survivors.length === oldColData.length) continue; 
                 hasRefill = true;
-                let colDiv = document.getElementById(`col-${c}`); colDiv.innerHTML = ''; let newColData = [];
+                
+                let colDiv = document.getElementById(`col-${c}`); 
+                colDiv.innerHTML = ''; 
+                let newColData = [];
+                
                 survivors.forEach((item, newR) => {
-                    newColData.push(item.type); let el = createSymbol(item.type); el.setAttribute('data-row', newR);
-                    let delta = item.oldR - newR; el.style.transform = `translateY(-${delta * 100}%)`;
-                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                    newColData.push(item.type); 
+                    let el = createSymbol(item.type); 
+                    el.setAttribute('data-row', newR);
+                    let delta = item.oldR - newR; 
+                    el.style.transform = `translateY(-${delta * 100}%)`;
+                    colDiv.appendChild(el); 
+                    el.offsetHeight; 
+                    el.style.transform = `translateY(0)`;
                 });
 
                 let hasWildInCol = survivors.some(item => item.type === 10);
 
-let missing = config.rows - survivors.length;
-for(let k=0; k<missing; k++) {
-    let type;
-    while(true) {
-        type = getWeightedSymbol();
-        if (!type) type = 1;
-
-        // [規則1] 第 1 軸 (c===0) 掉落時也不能有 WILD
-        if (c === 0 && type === 10) continue;
-        
-        // [規則2] FG 模式限 1 顆 Wild
-        if (gameData.isFreeGame && type === 10) {
-            if (hasWildInCol) continue; 
-            hasWildInCol = true; 
-        }
-        break; 
-    }
+                let missing = config.rows - survivors.length;
+                for(let k=0; k<missing; k++) {
+                    let type;
+                    while(true) {
+                        // ★ 修復：正確傳入 c，確保分軸阻斷生效
+                        type = getWeightedSymbol(c); 
+                        if (!type) type = 1;
+                        
+                        // 檢查每軸限一 Wild 規則
+                        if (gameData.isFreeGame && type === 10) {
+                            if (hasWildInCol) continue; 
+                            hasWildInCol = true; 
+                        }
+                        break; 
+                    }
                     newColData.push(type);
-                    let el = createSymbol(type); let newR = survivors.length + k;
+                    
+                    let newR = survivors.length + k;
+                    let el = createSymbol(type); 
                     el.setAttribute('data-row', newR);
-                    let dropDist = (config.rows + k) - newR; el.style.transform = `translateY(-${dropDist * 100}%)`;
-                    colDiv.appendChild(el); el.offsetHeight; el.style.transform = `translateY(0)`;
+                    let dropDist = (config.rows + k) - newR; 
+                    el.style.transform = `translateY(-${dropDist * 100}%)`;
+                    colDiv.appendChild(el); 
+                    el.offsetHeight; 
+                    el.style.transform = `translateY(0)`;
                 }
                 gridData[c] = newColData;
             }
+            
             if(hasRefill) { 
                 await wait(400); 
                 AudioMgr.playSFX('stop');
                 await wait(300); 
                 checkLogic(); 
-            } else { endSpin(); }
+            } else { 
+                endSpin(); 
+            }
         }
 
         function endSpin() {
             isSpinning = false;
-            
             document.getElementById('spin-icon').classList.remove('fast');
-
             if (gameData.currentWin === 0 && !gameData.isFreeGame) document.getElementById('ui-message-bar').style.display = 'none';
             if(gameData.currentWin > 0) { gameData.credit += gameData.currentWin; gameData.currentWin = 0; updateAllUI(); }
 
@@ -1894,30 +1845,77 @@ for(let k=0; k<missing; k++) {
 
         async function endFreeGame() {
             const modal = document.getElementById('fg-end-modal');
-            const mask = document.getElementById('fg-mask'); // ★ 取得獨立遮罩
+            const mask = document.getElementById('fg-mask');
             const scoreEl = document.getElementById('fg-end-score');
+            const titleImg = document.getElementById('fg-title-img');
             const finalWin = gameData.currentWin;
 
-            /* ★ 同步控制遮罩與視窗 ★ */
+            // ★ 安全重置：確保每次正常結算開頭，圖片都是 YOU WIN
+            if(titleImg) titleImg.src = 'you-win.png';
+
+            let tier = 0;
+            if (finalWin >= 200000) tier = 5;
+            else if (finalWin >= 150000) tier = 4;
+            else if (finalWin >= 100000) tier = 3;
+            else if (finalWin >= 50000) tier = 2;
+            else if (finalWin > 0) tier = 1;
+            else tier = 0;
+
             modal.classList.remove('fade-out');
             mask.classList.remove('fade-out');
-
             modal.classList.add('active');
             mask.classList.add('active');
             
-            AudioMgr.playSFX('youWin');
+            if (tier === 5) { AudioMgr.playSFX('scatter'); AudioMgr.playSFX('bigWin'); } 
+            else if (tier === 4) { AudioMgr.playSFX('bigWin'); } 
+            else if (tier >= 1) { AudioMgr.playSFX('youWin'); }
 
-            // 開始噴金幣
-            let waves = 0;
-            let sprayer = setInterval(() => {
-                CoinManager.fire(finalWin); 
-                waves++;
-                if(waves >= 5) clearInterval(sprayer);
-            }, 600);
+            let breath = document.querySelector('.vfx-breathing');
+            if (tier === 5) {
+                if(!breath) {
+                    breath = document.createElement('div');
+                    breath.className = 'vfx-breathing';
+                    document.querySelector('.stage').appendChild(breath);
+                }
+                breath.classList.add('active');
+            }
 
-            animateValue(scoreEl, 0, finalWin, 1500);
+            if (tier >= 4 && typeof spawnConfetti === 'function') {
+                let confettiCount = (tier === 5) ? 100 : 50;
+                for(let i=0; i<confettiCount; i++) { setTimeout(spawnConfetti, i * 20); }
+            }
 
-            await wait(6500);
+            let sprayer = null;
+            if (tier >= 1) { 
+                let waves = 0;
+                let maxWaves = (tier === 5) ? 6 : (tier >= 2) ? 3 : 2;
+
+                const doFire = () => {
+                    if (tier === 5) { CoinManager.fire(50, 0.1); CoinManager.fire(50, 0.5); CoinManager.fire(50, 0.9); } 
+                    else if (tier === 4) { CoinManager.fire(40, 0.1); CoinManager.fire(40, 0.5); CoinManager.fire(40, 0.9); }
+                    else if (tier === 3) { CoinManager.fire(40, 0.1); CoinManager.fire(40, 0.9); }
+                    else if (tier === 2) { CoinManager.fire(40, 0.5); }
+                    else { CoinManager.fire(30, 0.5); } 
+                    waves++;
+                };
+
+                setTimeout(() => {
+                    doFire();
+                    sprayer = setInterval(() => {
+                        doFire();
+                        if(waves >= maxWaves) clearInterval(sprayer);
+                    }, 600);
+                }, 600);
+            }
+
+            let animDuration = (tier >= 4) ? 2500 : (tier >= 1) ? 1500 : 1000;
+            animateValue(scoreEl, 0, finalWin, animDuration);
+
+            let waitTime = (tier === 5) ? 8000 : (tier === 4) ? 6000 : (tier === 3) ? 4000 : (tier === 0) ? 2000 : 3000;
+            await wait(waitTime);
+
+            if(sprayer) clearInterval(sprayer);
+            if(breath) breath.classList.remove('active');
 
             modal.classList.add('fade-out');
             mask.classList.add('fade-out');
@@ -1930,24 +1928,15 @@ for(let k=0; k<missing; k++) {
 
             gameData.isFreeGame = false;
             document.body.classList.remove('free-mode');
-            
             AudioMgr.playBGM('main');
-            
-            const msgBar = document.getElementById('ui-message-bar');
-            msgBar.style.display = 'none';
-
+            document.getElementById('ui-message-bar').style.display = 'none';
             gameData.credit += gameData.currentWin; 
             gameData.currentWin = 0; 
             isSpinning = false; 
-            
-            const spinIcon = document.getElementById('spin-icon');
-            if (spinIcon) spinIcon.classList.remove('fast');
-            
+            document.getElementById('spin-icon').classList.remove('fast');
             const bgVideo = document.getElementById('bg-video');
-            if (bgVideo && bgVideo.paused) {
-                bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
-            }
-        } 
+            if (bgVideo && bgVideo.paused) bgVideo.play().catch(e => console.log("影片喚醒失敗", e));
+        }
 
         function changeBet(amount) {
             if (isSpinning) return; 
@@ -1971,14 +1960,12 @@ for(let k=0; k<missing; k++) {
             winEl.classList.remove('text-pop-center'); void winEl.offsetWidth; winEl.classList.add('text-pop-center');
             setTimeout(() => winEl.classList.remove('text-pop-center'), 150);
         }
-        /* ★ V13.91: 支援急停的 wait 函數 ★ */
+        
         function wait(ms) { 
             return new Promise(resolve => {
                 const start = Date.now();
                 const check = () => {
-                    // 如果觸發急停，直接結束等待
                     if (isQuickStop) { resolve(); return; }
-                    // 時間到了也結束等待
                     if (Date.now() - start >= ms) { resolve(); return; }
                     requestAnimationFrame(check);
                 };
@@ -1987,17 +1974,13 @@ for(let k=0; k<missing; k++) {
         }
         function getSymbolEl(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
     
-        /* ★ V13.82: 針對 iOS 下拉重整進行暴力鎖定 ★ */
         document.addEventListener('gesturestart', function (e) {
             e.preventDefault();
         });
 
-        // 監聽 touchmove 事件，若非在 .info-content 內滑動，則全面禁止
         document.addEventListener('touchmove', function(e) {
-            // 檢查是否正在滑動說明頁
             let target = e.target;
             let isScrollable = false;
-            
             while(target) {
                 if (target.classList && target.classList.contains('info-content')) {
                     isScrollable = true;
@@ -2005,24 +1988,18 @@ for(let k=0; k<missing; k++) {
                 }
                 target = target.parentNode;
             }
-
             if (!isScrollable) {
-                // 如果不是在說明頁內，直接殺死滑動事件
                 e.preventDefault();
             } else {
-                // 如果在說明頁內，檢查是否滑到底部或頂部，防止橡皮筋效果傳導到 body
                 let el = document.querySelector('.info-content');
                 let scrollTop = el.scrollTop;
                 let scrollHeight = el.scrollHeight;
                 let height = el.clientHeight;
                 let deltaY = e.touches[0].clientY - (el.lastY || e.touches[0].clientY);
                 el.lastY = e.touches[0].clientY;
-
-                // 向上滑到底
                 if (scrollTop === 0 && deltaY > 0) {
                     e.preventDefault();
                 }
-                // 向下滑到底
                 if (scrollTop + height >= scrollHeight && deltaY < 0) {
                     e.preventDefault();
                 }
@@ -2030,10 +2007,21 @@ for(let k=0; k<missing; k++) {
         }, { passive: false });
 
         document.addEventListener('touchstart', function(e) {
-             // 紀錄起始點，供 touchmove 判斷方向
              let el = document.querySelector('.info-content');
              if(el) el.lastY = e.touches[0].clientY;
         }, { passive: false });
+
+        function spawnConfetti() {
+            const stage = document.querySelector('.stage');
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            const el = document.createElement('div');
+            el.className = 'confetti';
+            el.style.left = Math.random() * 100 + '%';
+            el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            el.style.animationDuration = (Math.random() * 2 + 1.5) + 's'; 
+            stage.appendChild(el);
+            setTimeout(() => { el.remove(); }, 3500);
+        }
 
     </script>
 </body>
