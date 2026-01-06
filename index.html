@@ -786,7 +786,6 @@
             9:  { type: 'low',  payouts: {3: 0.25, 4: 1.5, 5: 5},  weight: 85, inBase: true, inFree: false },
             10: { type: 'wild', weight: 8, inBase: true, inFree: true },    
             
-            // ★ [9.2最終修正] SCATTER 權重調降至 4.85，達成 96.49% RTP
             11: { type: 'scatter', weight: 4.85, inBase: true, inFree: true }, 
 
             20: { type: 'mul', val: 2,   weight: 0, inBase: false, inFree: true }, 
@@ -798,7 +797,6 @@
         let poolBase = []; 
         let poolFree = []; 
         
-        // ★ 9.2版 分軸權重核心變數
         let poolsFreeByReel = [[], [], [], [], []]; 
         let totalWeightsFreeByReel = [0, 0, 0, 0, 0];
         
@@ -826,22 +824,19 @@
         }
         initBasePool(); 
 
-        // ★ [9.2版] 分軸阻斷權重邏輯
         function updateFreeGameWeights(scatterCount) {
             poolsFreeByReel = [[], [], [], [], []];
             totalWeightsFreeByReel = [0, 0, 0, 0, 0];
 
             const symbolQuota = 3600; 
-            const baseMultiplierQuota = 800; // 提高總量基數，強化阻斷感
+            const baseMultiplierQuota = 800; 
 
             let connectableSymbols = [1, 2, 3, 4, 5, 10, 11];
-            // S4/S5 機率拉高至 35% (1400/4000)
             let ratios = { 1: 100, 2: 200, 3: 300, 4: 1400, 5: 1400, 10: 142, 11: 30 };
             let ratioSum = 0;
             for(let id in ratios) ratioSum += ratios[id];
 
             for (let c = 0; c < 5; c++) {
-                // --- A. 計算普通符號權重 ---
                 connectableSymbols.forEach(id => {
                     let w = (ratios[id] / ratioSum) * symbolQuota;
                     if (scatterCount === 3 && id === 10) w *= 1.2; 
@@ -849,12 +844,11 @@
                     totalWeightsFreeByReel[c] += w;
                 });
 
-                // --- B. 計算分軸龍眼權重 (前三軸阻斷) ---
                 let reelMulBoost = 1.0;
-                if (c === 0) reelMulBoost = 3.5;      // 第 1 軸龍眼爆多 (阻斷起手)
-                else if (c === 1) reelMulBoost = 2.0; // 第 2 軸龍眼增多
-                else if (c === 2) reelMulBoost = 1.5; // 第 3 軸龍眼稍微增多
-                else reelMulBoost = 0.5;              // 後兩軸龍眼變少
+                if (c === 0) reelMulBoost = 3.5;      
+                else if (c === 1) reelMulBoost = 2.0; 
+                else if (c === 2) reelMulBoost = 1.5; 
+                else reelMulBoost = 0.5;              
 
                 let currentReelMulQuota = baseMultiplierQuota * reelMulBoost;
 
@@ -926,15 +920,12 @@
             });
         };
 
-        // ★★★ 數據連線監聽器 (Data Bridge) ★★★
         window.addEventListener('message', (event) => {
             const data = event.data;
-            // 接收來自 Lobby 的初始餘額
             if (data.type === 'initBalance') {
                 gameData.credit = data.value;
                 updateAllUI();
             } 
-            // 接收跑馬燈訊息 (可選)
             else if (data.type === 'tickerMessage') {
                 const msgBar = document.getElementById('ui-message-bar');
                 const msgContent = document.getElementById('msg-content');
@@ -945,7 +936,6 @@
             }
         });
 
-        // ★★★ 發送餘額更新回 Lobby ★★★
         function syncBalanceToLobby() {
             if (window.parent) {
                 window.parent.postMessage({
@@ -983,7 +973,6 @@
                 AudioMgr.playSFX('click');
                 document.getElementById('setting-modal').classList.add('active');
             });
-            // ★ 修改：Home 按鈕發送關閉訊號
             document.getElementById('btn-menu-home').addEventListener('click', () => {
                 AudioMgr.playSFX('click');
                 document.getElementById('menu-modal').classList.remove('active');
@@ -1231,7 +1220,17 @@
 
             gameData.credit -= buyCost; 
             updateAllUI(); 
-            syncBalanceToLobby(); // ★ 同步餘額
+            syncBalanceToLobby(); 
+
+            // ★★★ [新增功能] 購買特色遊戲也算經驗值 ★★★
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'bet',
+                    amount: buyCost
+                }, '*');
+            }
+            // ★★★ [新增結束] ★★★
+
             isBuyingFeature = true;
             isAutoPlay = false;
             updateAutoPlayButton(); 
@@ -1300,10 +1299,8 @@
             }
         }
 
-        // ★ [9.2版] 支援分軸索引的取樣函數
         function getWeightedSymbol(reelIndex = 0) {
             if (gameData.isFreeGame) {
-                // 使用分軸權重池
                 let usePool = poolsFreeByReel[reelIndex];
                 let useTotal = totalWeightsFreeByReel[reelIndex];
                 if (!usePool || usePool.length === 0) return 1;
@@ -1316,7 +1313,6 @@
                 }
                 return 1;
             } else {
-                // 一般模式維持原樣
                 let r = Math.random() * totalWeightBase; 
                 let sum = 0;
                 for (let item of poolBase) { 
@@ -1347,36 +1343,42 @@
 
         async function startSpin() {
             if(isSpinning) return;
-            if(!gameData.isFreeGame && !isBuyingFeature && gameData.credit < gameData.bet) { 
-                alert("點數不足！"); 
-                isAutoPlay = false; 
-                updateAutoPlayButton();
-                return; 
-            }
-            
-            isSpinning = true;
-            if (!isAutoPlay) AudioMgr.playSFX('spin'); 
-
-            document.getElementById('spin-icon').classList.add('fast');
-            isQuickStop = false;
-
-            const msgBar = document.getElementById('ui-message-bar');
-            const msgContent = document.getElementById('msg-content');
             
             if (!gameData.isFreeGame) {
-                msgContent.innerText = "GOOD LUCK!"; msgContent.className = 'style-promo anim-pop'; msgBar.style.display = 'flex';
+                const msgBar = document.getElementById('ui-message-bar');
+                const msgContent = document.getElementById('msg-content');
+                msgContent.innerText = "GOOD LUCK!"; 
+                msgContent.className = 'style-promo anim-pop'; 
+                msgBar.style.display = 'flex';
+
                 if(!isBuyingFeature) { 
                     gameData.credit -= gameData.bet; 
-                    syncBalanceToLobby(); // ★ 同步餘額
+                    syncBalanceToLobby(); 
+                    
+                    // ★★★ [新增功能] 普通下注通知 Lobby 加經驗值 ★★★
+                    if (window.parent) {
+                        window.parent.postMessage({
+                            type: 'bet',
+                            amount: gameData.bet
+                        }, '*');
+                    }
+                    // ★★★ [新增結束] ★★★
                 }
+                
                 gameData.accumulatedMultiplier = 0; 
                 resetMultiplierUI(); 
                 gameData.currentWin = 0;
-            } else { 
+            } 
+            else { 
                 gameData.freeSpinsLeft--; 
                 updateFreeGameMessage('spin', gameData.freeSpinsLeft);
             }
             
+            isSpinning = true;
+            if (!isAutoPlay) AudioMgr.playSFX('spin');
+            document.getElementById('spin-icon').classList.add('fast');
+            isQuickStop = false;
+
             score = 0; updateAllUI(); 
 
             let finalGridData = []; 
@@ -1400,7 +1402,6 @@
                         type = 11;
                     } else {
                         while(true) {
-                            // ★ 修正：這裡傳入 c，BaseGame 雖然用不到但傳入無妨
                             type = getWeightedSymbol(c);
                             if (c === 0 && type === 10) continue;
                             if (gameData.isFreeGame && type === 10) {
@@ -1426,7 +1427,6 @@
 
                     let fillerSyms = []; 
                     for(let i=0; i<6; i++) {
-                        // ★ 修正重點：這裡必須傳入 (c)，否則 FG 模式會壞掉
                         fillerSyms.push(getWeightedSymbol(c), getWeightedSymbol(c), getWeightedSymbol(c)); 
                     } 
                     
