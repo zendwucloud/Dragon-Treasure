@@ -585,41 +585,48 @@
 
     <script>
         const AudioMgr = {
-            enabled: true,
-            currentBGM: null,
+            enabled: true,      // 總開關 (保留給內部邏輯使用)
+            musicEnabled: true, // ★ 新增：控制背景音樂
+            sfxEnabled: true,   // ★ 新增：控制音效 (轉動聲、贏分聲)
+            
             poolIndices: { spin: 1, stop: 1, win: 1, win_free: 1, bigwin: 1, scatter: 1, click: 1, dragon: 1, youWin: 1 },
 
             init: function() {
-                document.querySelectorAll('audio').forEach(a => a.volume = 1.0);
-                const bgmMain = document.getElementById('bgm_main');
-                const bgmFree = document.getElementById('bgm_free');
-                if(bgmMain) bgmMain.volume = 0.8;
-                if(bgmFree) bgmFree.volume = 1.0;
-                
-                document.querySelectorAll('audio').forEach(a => {
-                    a.volume = 0;           
-                    a.play().catch(()=>{}); 
-                    setTimeout(() => { 
-                        a.pause();          
-                        a.currentTime = 0; 
-                        a.volume = 1.0;     
-                    }, 50);
+                // 初始化音量
+                document.querySelectorAll('audio').forEach(a => { 
+                    a.volume = 0; a.play().catch(()=>{}); 
+                    setTimeout(()=> { a.pause(); a.currentTime=0; a.volume=1.0; }, 50); 
                 });
+                // 預設啟動背景音樂 (之後會被大廳設定覆蓋)
+                if(this.musicEnabled) this.playBGM('main');
+            },
+            
+            // ★ 新增：接收來自 Lobby 的設定並套用
+            updateSettings: function(musicOn, sfxOn) {
+                this.musicEnabled = musicOn;
+                this.sfxEnabled = sfxOn;
 
-                if (this.enabled) {
+                // 1. 處理音樂：如果被關掉，馬上暫停；如果打開，恢復播放
+                if (!this.musicEnabled) {
+                    const bgmMain = document.getElementById('bgm_main');
+                    const bgmFree = document.getElementById('bgm_free');
+                    if(bgmMain) bgmMain.pause();
+                    if(bgmFree) bgmFree.pause();
+                } else {
+                    // 恢復播放 (判斷現在是免費遊戲還是一般遊戲)
                     let bgmId = gameData.isFreeGame ? 'bgm_free' : 'bgm_main';
-                    let bgm = document.getElementById(bgmId);
-                    if(bgm) {
-                        bgm.volume = (bgmId === 'bgm_free') ? 1.0 : 0.8; 
-                        bgm.play().catch(()=>{});
-                    }
+                    this.playBGM(gameData.isFreeGame ? 'free' : 'main');
                 }
             },
             
             playBGM: function(type) {
-                if (!this.enabled) return;
-                document.getElementById('bgm_main').pause();
-                document.getElementById('bgm_free').pause();
+                if (!this.musicEnabled) return; // ★ 檢查音樂開關
+
+                const bgmMain = document.getElementById('bgm_main');
+                const bgmFree = document.getElementById('bgm_free');
+                if(bgmMain) bgmMain.pause();
+                if(bgmFree) bgmFree.pause();
+
                 let targetId = (type === 'free') ? 'bgm_free' : 'bgm_main';
                 let target = document.getElementById(targetId);
                 if(target) {
@@ -630,7 +637,8 @@
             },
 
             playSFX: function(name) {
-                if (!this.enabled) return;
+                if (!this.sfxEnabled) return; // ★ 檢查音效開關
+
                 let key = name;
                 if(name === 'winFree') key = 'win_free';
                 if(name === 'bigWin') key = 'bigwin';
@@ -641,10 +649,8 @@
                 let id = `sfx_${key}_${idx}`;
                 let audio = document.getElementById(id);
 
-                if (!audio) {
-                    console.warn(`Audio Channel Missing: ${id}. Fallback to Channel 1.`);
-                    audio = document.getElementById(`sfx_${key}_1`);
-                }
+                // 如果找不到通道，退回使用第 1 通道
+                if (!audio) audio = document.getElementById(`sfx_${key}_1`);
 
                 if (audio) {
                     audio.currentTime = 0;
@@ -653,14 +659,10 @@
                 }
             },
 
+            // 保留原本的切換功能，避免內部報錯
             toggle: function(state) {
                 this.enabled = state;
-                if(!this.enabled) {
-                    document.querySelectorAll('audio').forEach(a => a.pause());
-                } else {
-                    if(gameData.isFreeGame) this.playBGM('free');
-                    else this.playBGM('main');
-                }
+                this.updateSettings(state, state);
             }
         };
     </script>
@@ -934,6 +936,12 @@
                 msgBar.style.display = 'flex';
                 setTimeout(() => { if (!isSpinning) msgBar.style.display = 'none'; }, 10000);
             }
+            // ★★★ [新增這一段] 接收音效設定 ★★★
+            else if (data.type === 'updateSettings') {
+                // 呼叫 AudioMgr 新功能
+                AudioMgr.updateSettings(data.music, data.sfx);
+            }
+            // ★★★ [新增結束] ★★★
         });
 
         function syncBalanceToLobby() {
