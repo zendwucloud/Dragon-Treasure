@@ -93,7 +93,7 @@
         
         #ui-multiplier, #ui-free-spins { display: none; font-size: 2.5vh; color: #00FFFF; text-shadow: 0 0 10px #0000FF; bottom: 18%; position: absolute; z-index: 500;}
         #ui-multiplier { right: 5%; } #ui-free-spins { left: 5%; }
-        .free-mode #ui-multiplier, .free-mode #ui-free-spins { display: block; }
+       
 
         #ui-message-bar { position: absolute; bottom: 26.7%; left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
         #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
@@ -139,7 +139,15 @@
         #fg-end-modal.active { opacity: 1; pointer-events: auto; }
         #fg-end-modal .content-wrapper { text-align: center; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s forwards; width: 100%; }
         #fg-end-modal .win-title { width: 80%; display: block; margin: 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
-        #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: 11vh; color: #FFFF00; margin-top: -3vh; text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000; letter-spacing: 2px;}
+        #fg-end-score { 
+            font-family: 'Arial Black', sans-serif; 
+            font-size: min(13vw, 8vh); /* 🎯 核心修復：動態縮放，保證字體不超框 */
+            color: #FFFF00; 
+            margin-top: -1vh; /* 微調與上方 YOU WIN 的間距 */
+            text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000; 
+            letter-spacing: 0px; /* 移除額外字距，節省空間 */
+            white-space: nowrap; /* 確保數字絕對不會被擠到第二行 */
+        }
         @keyframes popIn { 0% { transform: scale(0) translateY(-10%); } 100% { transform: scale(1) translateY(-10%); } }
 
         #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; z-index: 2400; transition: bottom 0.3s; }
@@ -737,9 +745,19 @@ updateMessage: function(text, styleClass, animationClass) {
 
             onFreeGameTrigger: async (spins, scatterCount) => {
                 window.AudioMgr.playSFX('scatter');
-                document.querySelectorAll('.sym-scatter').forEach(el => el.classList.add('active'));
+                
+                // 👇 幫 SCATTER 也套用「清除殘留動畫與強制重繪」的解除封印術
+                document.querySelectorAll('.sym-scatter').forEach(el => {
+                    el.style.animation = 'none';
+                    el.style.transform = 'none';
+                    void el.offsetWidth; // 強制重繪
+                    el.style.animation = '';
+                    el.style.transform = '';
+                    el.classList.add('active');
+                });
                 
                 const msgBar = document.getElementById('ui-message-bar');
+                // ... 後面保持不變
                 const msgContent = document.getElementById('msg-content');
                 msgBar.style.display = 'flex';
                 msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`;
@@ -769,7 +787,14 @@ updateMessage: function(text, styleClass, animationClass) {
                 modal.classList.remove('active');
                 document.body.classList.remove('free-mode');
                 window.AudioMgr.playBGM('main');
-                engine.startSpin(); 
+                
+                // 👇 踩煞車：強制解除按鈕的快速旋轉動畫
+                document.getElementById('spin-icon').classList.remove('fast');
+                
+                // 補上安全鎖：只有在「自動遊玩」開啟時，才繼續轉下一局
+                if (isAutoPlay) {
+                    setTimeout(() => engine.startSpin(), 800);
+                }
             },
 
             onSpinComplete: () => {
