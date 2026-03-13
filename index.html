@@ -105,6 +105,8 @@
 .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
 .style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
 .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
+/* 👇 補上這行專屬的紅色警告樣式 */
+.style-error { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #ff4500 !important; text-shadow: 0 0 10px #ff0000, 2px 2px 0px #000 !important; letter-spacing: 2px; }
 
 /* 2. 動畫效果 */
 .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } 
@@ -516,6 +518,21 @@ updateMessage: function(text, styleClass, animationClass) {
             onBalanceChange: (val) => { 
                 document.getElementById('ui-credit').innerText = val.toLocaleString('en-US', {minimumFractionDigits: 2}); 
                 syncBalanceToLobby(); 
+            },
+
+            // 👇 補上這個接收錯誤訊息的處理器
+            onError: (msg) => {
+                window.AudioMgr.playSFX('click'); // 播個提示音
+                View.updateMessage(msg, "style-error", "anim-pop"); // 彈出紅色警告
+                
+                // 3秒後自動隱藏警告
+                setTimeout(() => {
+                    if (!engine.state.isSpinning) document.getElementById('ui-message-bar').style.display = 'none';
+                }, 3000);
+                
+                // 如果正在自動遊玩，遇到錢不夠也要強制停止
+                isAutoPlay = false;
+                document.getElementById('btn-auto').classList.remove('active');
             },
             
             onSpinStart: (isBuyFeature) => {
