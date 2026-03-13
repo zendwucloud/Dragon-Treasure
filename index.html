@@ -302,103 +302,12 @@
         <audio id="sfx_youWin_1" src="you-win.mp3"></audio>
     </div>
 
-    <script>
-        window.AudioMgr = {
-            musicEnabled: true, sfxEnabled: true,
-            updateSettings: function(musicOn, sfxOn) {
-                this.musicEnabled = musicOn; this.sfxEnabled = sfxOn;
-                if (!this.musicEnabled) { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } 
-                else { this.playBGM(document.body.classList.contains('free-mode') ? 'free' : 'main'); }
-            },
-            playBGM: function(type) {
-                if (!this.musicEnabled) return;
-                document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause();
-                let target = document.getElementById((type === 'free') ? 'bgm_free' : 'bgm_main');
-                if(target) { target.currentTime = 0; target.volume = (type === 'free') ? 1.0 : 0.8; target.play().catch(()=>{}); }
-            },
-            playSFX: function(name) {
-                if (!this.sfxEnabled) return;
-                let audio = document.getElementById(`sfx_${name}_1`);
-                if (audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
-            }
-        };
-
-        window.CoinManager = {
-            canvas: null, ctx: null, particles: [], isRunning: false, coinImg: new Image(), imgLoaded: false,
-            init: function() {
-                this.canvas = document.getElementById('coin-canvas'); this.ctx = this.canvas.getContext('2d');
-                this.canvas.width = this.canvas.offsetWidth; this.canvas.height = this.canvas.offsetHeight;
-                this.coinImg.src = 'coin.png'; this.coinImg.onload = () => { this.imgLoaded = true; };
-            },
-            fire: function(amount, originX = 0.5) { 
-                let count = (amount > 200) ? 50 : amount; if (amount < 5) count = 20; 
-                let sparkleCount = Math.floor(count / 2);
-                if (!this.isRunning) { this.isRunning = true; this.animate(); }
-                for (let i = 0; i < count; i++) this.particles.push(this.createParticle('coin', originX));
-                for (let i = 0; i < sparkleCount; i++) this.particles.push(this.createParticle('sparkle', originX));
-            },
-            createParticle: function(type, originX = 0.5) {
-                const w = this.canvas.width; const h = this.canvas.height; const startX = w * originX; 
-                if (type === 'coin') {
-                    return { type: 'coin', x: startX, y: h + 50, vx: (Math.random() - 0.5 + (0.5 - originX)) * (w * 0.04), vy: -(Math.random() * h * 0.025 + h * 0.015), gravity: h * 0.0005, size: (Math.random() * 30 + 30) * (w / 720) * 3, rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 10, flip: Math.random() * Math.PI, flipSpeed: Math.random() * 0.2 + 0.1, isFlashing: false, flashTimer: 0, flashDuration: 30 };
-                } else {
-                    return { type: 'sparkle', x: startX + (Math.random() - 0.5) * 50, y: h + 50, vx: (Math.random() - 0.5) * (w * 0.04), vy: -(Math.random() * h * 0.028 + h * 0.01), gravity: h * 0.0002, size: Math.random() * 5 + 2, alpha: 1, decay: Math.random() * 0.02 + 0.01 };
-                }
-            },
-            animate: function() {
-                if (!this.isRunning) return;
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                for (let i = 0; i < this.particles.length; i++) {
-                    let p = this.particles[i]; p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
-                    if (p.type === 'coin') {
-                        p.rotation += p.rSpeed; p.flip += p.flipSpeed;
-                        if (!p.isFlashing && Math.random() < 0.05) { p.isFlashing = true; p.flashTimer = 0; }
-                        let brightness = 100;
-                        if (p.isFlashing) { p.flashTimer++; brightness = 100 + 100 * Math.sin((p.flashTimer / p.flashDuration) * Math.PI); if (p.flashTimer >= p.flashDuration) p.isFlashing = false; }
-                        this.ctx.save(); this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rotation * Math.PI / 180); this.ctx.scale(Math.cos(p.flip), 1);
-                        if (brightness > 105) this.ctx.filter = `brightness(${brightness}%)`;
-                        if (this.imgLoaded) this.ctx.drawImage(this.coinImg, -p.size/2, -p.size/2, p.size, p.size);
-                        else { this.ctx.beginPath(); this.ctx.arc(0, 0, p.size/2, 0, Math.PI*2); this.ctx.fillStyle='#ffd700'; this.ctx.fill(); }
-                        this.ctx.restore();
-                    } else {
-                        p.alpha -= p.decay; if(p.alpha <= 0) { this.particles.splice(i, 1); i--; continue; }
-                        this.ctx.save(); this.ctx.globalAlpha = p.alpha; this.ctx.beginPath(); this.ctx.fillStyle = (Math.random()>0.5)?'#ffffff':'#ffff00'; this.ctx.fillRect(p.x, p.y, p.size, p.size); this.ctx.restore();
-                    }
-                    if (p.y > this.canvas.height + 100) { this.particles.splice(i, 1); i--; }
-                }
-                if (this.particles.length > 0) requestAnimationFrame(() => this.animate());
-                else { this.isRunning = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
-            }
-        };
-
-        document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
-        document.addEventListener('touchmove', function(e) {
-            let target = e.target; let isScrollable = false;
-            while(target) { if (target.classList && target.classList.contains('info-content')) { isScrollable = true; break; } target = target.parentNode; }
-            if (!isScrollable) { e.preventDefault(); } 
-            else {
-                let el = document.querySelector('.info-content');
-                let scrollTop = el.scrollTop; let scrollHeight = el.scrollHeight; let height = el.clientHeight;
-                let deltaY = e.touches[0].clientY - (el.lastY || e.touches[0].clientY); el.lastY = e.touches[0].clientY;
-                if (scrollTop === 0 && deltaY > 0) e.preventDefault();
-                if (scrollTop + height >= scrollHeight && deltaY < 0) e.preventDefault();
-            }
-        }, { passive: false });
-        document.addEventListener('touchstart', function(e) { let el = document.querySelector('.info-content'); if(el) el.lastY = e.touches[0].clientY; }, { passive: false });
-
-        function spawnConfetti() {
-            const stage = document.querySelector('.stage'); const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-            const el = document.createElement('div'); el.className = 'confetti'; el.style.left = Math.random() * 100 + '%'; el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; el.style.animationDuration = (Math.random() * 2 + 1.5) + 's'; 
-            stage.appendChild(el); setTimeout(() => { el.remove(); }, 3500);
-        }
-    </script>
-
-    <script type="module">
+   <script type="module">
         import GameConfig from './config.js';
         import { SlotEngine } from './engine.js';
+        import { GUIController } from './gui.js';
 
-        let isTurboMode = false;
-        let isAutoPlay = false;
+        let gui; // 宣告全域的 UI 控制器
 
         const View = {
             init: function() {
@@ -418,32 +327,7 @@
                     }
                 }
             },
- 
-updateMessage: function(text, styleClass, animationClass) {
-                const b = document.getElementById('ui-message-bar'), c = document.getElementById('msg-content');
-                if(!b || !c) return;
-                c.innerText = text;
-                c.className = styleClass + ' ' + animationClass;
-                b.style.display = 'flex';
-            },
-
-            showPromoMessage: function() {
-                this.updateMessage("★ 3個 SCATTER 觸發 5次 免費遊戲 ★", "style-promo", "anim-scroll");
-                setTimeout(() => { 
-                    if(!engine.state.isSpinning && engine.state.currentWin === 0) 
-                        document.getElementById('ui-message-bar').style.display = 'none'; 
-                }, 10000);
-            },
-
-            startPromoLoop: function() {
-                if(window.promoInterval) clearInterval(window.promoInterval);
-                window.promoInterval = setInterval(() => { 
-                    // 修正 && 符號
-                    if (!engine.state.isSpinning && !engine.state.isFreeGame && engine.state.currentWin === 0) 
-                        this.showPromoMessage(); 
-                }, 14000);
-            },
-           
+            
             createSymbol: function(type) {
                 let div = document.createElement('div');
                 if (type === 10) div.className = `symbol sym-wild`;
@@ -497,7 +381,6 @@ updateMessage: function(text, styleClass, animationClass) {
                 container.innerHTML += rulesHtml;
             },
 
-            updateBetUI: function(bet) { document.getElementById('ui-bet').innerText = bet.toLocaleString('en-US', {minimumFractionDigits: 2}); },
             wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); },
             getSymbolEl: function(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
         };
@@ -510,6 +393,7 @@ updateMessage: function(text, styleClass, animationClass) {
             } 
             else if (data.type === 'updateSettings') { window.AudioMgr.updateSettings(data.music, data.sfx); }
         });
+
         function syncBalanceToLobby() {
             if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
         }
@@ -520,51 +404,39 @@ updateMessage: function(text, styleClass, animationClass) {
                 syncBalanceToLobby(); 
             },
 
-            // 👇 補上這個接收錯誤訊息的處理器
             onError: (msg) => {
-                window.AudioMgr.playSFX('click'); // 播個提示音
-                View.updateMessage(msg, "style-error", "anim-pop"); // 彈出紅色警告
-                
-                // 3秒後自動隱藏警告
-                setTimeout(() => {
-                    if (!engine.state.isSpinning) document.getElementById('ui-message-bar').style.display = 'none';
-                }, 3000);
-                
-                // 如果正在自動遊玩，遇到錢不夠也要強制停止
-                isAutoPlay = false;
+                window.AudioMgr.playSFX('click'); 
+                gui.updateMessage(msg, "style-error", "anim-pop"); 
+                setTimeout(() => { if (!engine.state.isSpinning) document.getElementById('ui-message-bar').style.display = 'none'; }, 3000);
+                gui.isAutoPlay = false; 
                 document.getElementById('btn-auto').classList.remove('active');
             },
             
             onSpinStart: (isBuyFeature) => {
-                if(!isAutoPlay) window.AudioMgr.playSFX('spin');
+                if(!gui.isAutoPlay) window.AudioMgr.playSFX('spin');
                 document.getElementById('spin-icon').classList.add('fast');
                 document.getElementById('ui-message-bar').style.display = 'none';
                 document.getElementById('ui-win').innerText = "0.00";
                 
-                if (window.parent) {
+                if (window.parent && !engine.state.isFreeGame) {
                     let cost = isBuyFeature ? engine.state.bet * 200 : engine.state.bet;
-                    if (!engine.state.isFreeGame) window.parent.postMessage({ type: 'bet', amount: cost }, '*');
+                    window.parent.postMessage({ type: 'bet', amount: cost }, '*');
                 }
 
-                // 👇 整合後的跑馬燈觸發
-                if (!engine.state.isFreeGame) View.updateMessage("GOOD LUCK!", "style-promo", "anim-pop");
-                else View.updateMessage(`FREE SPINS: ${engine.state.freeSpinsLeft}`, "style-blue", "anim-pop");
+                if (!engine.state.isFreeGame) gui.updateMessage("GOOD LUCK!", "style-promo", "anim-pop");
+                else gui.updateMessage(`FREE SPINS: ${engine.state.freeSpinsLeft}`, "style-blue", "anim-pop");
             },
-
             
             onFreeSpinUpdate: (left) => { document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${left}`; },
 
-            // ★ 完美修復 1：恢復成帶有實體長條帶的滾動動畫 (Reel Strip)
             playSpinAnimation: async (gridData) => {
                 const spinPromises = [];
                 for(let c = 0; c < GameConfig.mechanics.cols; c++) {
                     const p = new Promise(async (resolve) => {
-                        let delay = isTurboMode ? 0 : c * 300;
+                        let delay = gui.isTurboMode ? 0 : c * 300; 
                         await View.wait(delay);
 
                         let colDiv = document.getElementById(`col-${c}`);
-                        
-                        // 取得原本還留在畫面上的舊符號
                         let oldElements = colDiv.querySelectorAll('.column > .symbol');
                         let currentSyms = [];
                         oldElements.forEach(el => {
@@ -576,69 +448,54 @@ updateMessage: function(text, styleClass, animationClass) {
                         });
                         if (currentSyms.length === 0) currentSyms = [1, 2, 3];
 
-                        // 產生快速捲動用的過渡模糊符號
                         let fillerSyms = [];
-                        for(let i=0; i<6; i++) {
-                            fillerSyms.push(Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1);
-                        }
+                        for(let i=0; i<6; i++) { fillerSyms.push(Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1); }
 
                         let targetSyms = gridData[c];
-
-                        // 將舊符號、過渡符號、新符號組合成長條帶
                         let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
                         let stripDiv = document.createElement('div');
                         stripDiv.className = 'reel-strip';
-                        stripContent.forEach((type) => {
-                            let el = View.createSymbol(type);
-                            stripDiv.appendChild(el);
-                        });
+                        stripContent.forEach((type) => { let el = View.createSymbol(type); stripDiv.appendChild(el); });
 
-                        // 設定長度並掛到捲軸上
                         let totalSymbols = stripContent.length;
                         let visibleSymbols = GameConfig.mechanics.rows;
-                        let totalHeightPct = (totalSymbols / visibleSymbols) * 100;
-                        stripDiv.style.height = `${totalHeightPct}%`;
+                        stripDiv.style.height = `${(totalSymbols / visibleSymbols) * 100}%`;
 
                         colDiv.appendChild(stripDiv);
-                        oldElements.forEach(el => el.remove()); // 移除獨立的舊方塊
+                        oldElements.forEach(el => el.remove()); 
+                        void stripDiv.offsetWidth; 
 
-                        void stripDiv.offsetWidth; // 觸發瀏覽器重繪
-
-                        // 啟動 Transform 動畫
-                        let symbolsToMove = currentSyms.length + fillerSyms.length;
-                        let movePct = (symbolsToMove / totalSymbols) * 100;
+                        let movePct = ((currentSyms.length + fillerSyms.length) / totalSymbols) * 100;
                         stripDiv.classList.add('moving');
                         stripDiv.style.transform = `translateY(${movePct}%)`;
 
-                        let spinTime = isTurboMode ? 1000 : 2000;
-                        if(isTurboMode) stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                        let spinTime = gui.isTurboMode ? 1000 : 2000;
+                        if(gui.isTurboMode) stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
                         else stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
 
                         await View.wait(spinTime);
 
                         stripDiv.style.transition = 'none';
                         window.AudioMgr.playSFX('stop');
-                        if(!isTurboMode) await View.wait(100);
+                        if(!gui.isTurboMode) await View.wait(100);
 
-                        // 滾動結束，將長條帶拆除，換成獨立方塊 (為了待會的消除掉落做準備)
                         colDiv.innerHTML = '';
                         targetSyms.forEach((type, r) => {
                             let el = View.createSymbol(type);
                             el.setAttribute('data-row', r);
-                            if(!isTurboMode) el.style.animation = 'landBounce 0.3s ease-out';
+                            if(!gui.isTurboMode) el.style.animation = 'landBounce 0.3s ease-out';
                             colDiv.appendChild(el);
                         });
-
                         resolve();
                     });
                     spinPromises.push(p);
                 }
                 await Promise.all(spinPromises);
-                await View.wait(isTurboMode ? 100 : 300);
+                await View.wait(gui.isTurboMode ? 100 : 300);
             },
 
             playWinAnimation: async (matches, winAmount, spinMultipliers, totalWin) => {
-                View.updateMessage("WIN " + winAmount.toLocaleString('en-US', {minimumFractionDigits: 2}), "style-win", "anim-pop");
+                gui.updateMessage("WIN " + winAmount.toLocaleString('en-US', {minimumFractionDigits: 2}), "style-win", "anim-pop");
                 const winEl = document.getElementById('ui-win');
                 winEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
 
@@ -660,18 +517,9 @@ updateMessage: function(text, styleClass, animationClass) {
                     if(type === 10) hasWild = true;
                     let el = View.getSymbolEl(c, r);
                     if(el) {
-                        // 1. 先暫停所有殘留的行內動畫與位移
-                        el.style.animation = 'none';
-                        el.style.transform = 'none';
-                        
-                        // 2. 關鍵指令：強制瀏覽器在這一瞬間「重新計算並繪製」方塊 (Reflow)
-                        // 這樣瀏覽器就不會把清除動畫跟新增動畫混在一起執行
+                        el.style.animation = 'none'; el.style.transform = 'none';
                         void el.offsetWidth; 
-                        
-                        // 3. 放開行內樣式，套用中獎的 Class
-                        el.style.animation = '';
-                        el.style.transform = '';
-                        
+                        el.style.animation = ''; el.style.transform = '';
                         el.classList.add('anim-win');
                         if (type === 10 || (type >= 1 && type <= 5) || (type >= 20 && type <= 23) || type === 11) el.classList.add('active');
                     }
@@ -683,25 +531,18 @@ updateMessage: function(text, styleClass, animationClass) {
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let el = View.getSymbolEl(c, r);
                     if(el) { 
-                        el.classList.remove('anim-win', 'active');
-                        el.classList.add('anim-explode'); 
-                        let boom = document.createElement('div'); 
-                        boom.className = 'vfx-explosion'; 
-                        el.appendChild(boom); 
+                        el.classList.remove('anim-win', 'active'); el.classList.add('anim-explode'); 
+                        let boom = document.createElement('div'); boom.className = 'vfx-explosion'; el.appendChild(boom); 
                     }
                 });
                 await View.wait(400);
             }, 
 
-            // ★ 完美重現舊版真正的物理滑落 (TranslateY)
             playRefillAnimation: async (newGridData, matches) => {
                 for(let c = 0; c < GameConfig.mechanics.cols; c++) {
                     let colDiv = document.getElementById(`col-${c}`);
-                    
                     let survivors = [];
-                    for(let r = 0; r < GameConfig.mechanics.rows; r++) {
-                        if(!matches.has(`${c},${r}`)) survivors.push({ oldR: r });
-                    }
+                    for(let r = 0; r < GameConfig.mechanics.rows; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ oldR: r }); }
                     
                     colDiv.innerHTML = ''; 
                     let targetSyms = newGridData[c];
@@ -729,7 +570,6 @@ updateMessage: function(text, styleClass, animationClass) {
                         el.style.transform = `translateY(0)`;
                     }
                 }
-                
                 await View.wait(400); 
                 window.AudioMgr.playSFX('stop');
                 await View.wait(300); 
@@ -749,7 +589,7 @@ updateMessage: function(text, styleClass, animationClass) {
                 let breath = document.querySelector('.vfx-breathing');
                 if(!breath) { breath = document.createElement('div'); breath.className = 'vfx-breathing'; document.querySelector('.stage').appendChild(breath); }
                 breath.classList.add('active');
-                for(let i=0; i<100; i++) { setTimeout(spawnConfetti, i * 20); }
+                for(let i=0; i<100; i++) { setTimeout(window.spawnConfetti, i * 20); } 
 
                 let fountain = setInterval(() => { window.CoinManager.fire(150, 0.1); window.CoinManager.fire(150, 0.5); window.CoinManager.fire(150, 0.9); }, 200);
                 await View.wait(8000); 
@@ -762,26 +602,17 @@ updateMessage: function(text, styleClass, animationClass) {
 
             onFreeGameTrigger: async (spins, scatterCount) => {
                 window.AudioMgr.playSFX('scatter');
-                
-                // 👇 幫 SCATTER 也套用「清除殘留動畫與強制重繪」的解除封印術
                 document.querySelectorAll('.sym-scatter').forEach(el => {
-                    el.style.animation = 'none';
-                    el.style.transform = 'none';
-                    void el.offsetWidth; // 強制重繪
-                    el.style.animation = '';
-                    el.style.transform = '';
+                    el.style.animation = 'none'; el.style.transform = 'none';
+                    void el.offsetWidth; 
+                    el.style.animation = ''; el.style.transform = '';
                     el.classList.add('active');
                 });
                 
-                const msgBar = document.getElementById('ui-message-bar');
-                // ... 後面保持不變
-                const msgContent = document.getElementById('msg-content');
-                msgBar.style.display = 'flex';
-                msgContent.innerText = `★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`;
-                msgContent.className = 'style-blue anim-pop'; 
+                gui.updateMessage(`★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`, "style-blue", "anim-pop");
                 
                 await View.wait(3000);
-                msgBar.style.display = 'none';
+                document.getElementById('ui-message-bar').style.display = 'none';
                 document.body.classList.add('free-mode');
                 window.AudioMgr.playBGM('free');
                 document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${spins}`;
@@ -795,144 +626,53 @@ updateMessage: function(text, styleClass, animationClass) {
                 scoreEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
                 
                 modal.classList.add('active');
-
-                // 👇 核心修復：根據贏分倍數，決定要播多華麗的特效
                 let fountain = null;
                 
                 if (totalWin >= engine.state.bet * 20) {
-                    // 【史詩大獎】贏超過 20 倍：大獎音效 + 持續 5 秒的金幣噴泉與連續彩帶
                     window.AudioMgr.playSFX('bigwin');
                     fountain = setInterval(() => { window.CoinManager.fire(40, 0.5); }, 200);
-                    for(let i=0; i<50; i++) { setTimeout(spawnConfetti, i * 40); }
+                    for(let i=0; i<50; i++) { setTimeout(window.spawnConfetti, i * 40); }
                 } 
                 else if (totalWin >= engine.state.bet * 5) {
-                    // 【超級中獎】贏 5 ~ 20 倍：大獎音效 + 噴發兩次大量金幣與一次彩帶
                     window.AudioMgr.playSFX('bigwin');
                     window.CoinManager.fire(100, 0.5);
                     setTimeout(() => window.CoinManager.fire(80, 0.5), 600);
-                    spawnConfetti();
+                    window.spawnConfetti();
                 } 
                 else if (totalWin > 0) {
-                    // 【普通中獎】有贏錢：一般贏分音效 + 噴發一次少量金幣
                     window.AudioMgr.playSFX('win_free');
                     window.CoinManager.fire(30, 0.5);
                 } 
-                else {
-                    // 【槓龜沒贏】播放小音效，不噴任何金幣 (避免嘲諷玩家)
-                    window.AudioMgr.playSFX('click');
-                }
+                else { window.AudioMgr.playSFX('click'); }
 
-                // 讓結算畫面表演 5 秒
                 await View.wait(5000);
-                
-                // 時間到，記得關閉可能存在的持續噴泉
                 if (fountain) clearInterval(fountain);
                 
-                // 關閉畫面，回到一般模式
                 modal.classList.remove('active');
                 document.body.classList.remove('free-mode');
                 window.AudioMgr.playBGM('main');
-                
-                // 👇 踩煞車：強制解除按鈕的快速旋轉動畫
                 document.getElementById('spin-icon').classList.remove('fast');
                 
-                // 👇 補上安全鎖：只有在「自動遊玩」開啟時，才繼續轉下一局
-                if (isAutoPlay) {
-                    setTimeout(() => engine.startSpin(), 800);
-                }
+                if (gui.isAutoPlay) { setTimeout(() => engine.startSpin(), 800); }
             },
 
             onSpinComplete: () => {
                 document.getElementById('spin-icon').classList.remove('fast');
-                if(isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
+                if(gui.isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
             }
         });
 
- 
-
-            // --- 這是你要的第二段：啟動與按鈕綁定整合版 ---
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. 初始化
-            View.init();
-            View.startPromoLoop(); // 啟動跑馬燈閒置迴圈
-
-            // 👇 核心修復：在背景偷偷預載所有巨大的 Sprite 動態圖，防止第一次中獎時破圖閃爍
+            // 1. 預載素材
             const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
-            preloadSprites.forEach(src => {
-                let img = new Image();
-                img.src = src;
-            });
-            // 👆 預載結束
+            preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
+            
+            // 2. 初始化畫面
+            View.init();
 
-            // 2. 「開始遊戲」按鈕：必須在這裡綁定，否則遊戲會卡在載入畫面
-            const btnStart = document.getElementById('btn-start-game');
-            if(btnStart) {
-                btnStart.addEventListener('click', () => {
-                    document.getElementById('loading-layer').style.display = 'none';
-                    document.getElementById('game-stage').classList.add('loaded');
-                    window.AudioMgr.playBGM('main');
-                    window.CoinManager.init();
-                });
-            }
-
-            // 3. Spin 按鈕：修正原本斷掉的點擊邏輯
-            const spinBtn = document.getElementById('spinBtn');
-            if(spinBtn) {
-                spinBtn.addEventListener('click', () => { 
-                    isAutoPlay = false; 
-                    document.getElementById('btn-auto').classList.remove('active'); 
-                    engine.startSpin(false); 
-                });
-            }
-
-            // 4. 其餘選單按鈕
-            document.getElementById('btn-phone').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('menu-modal').classList.add('active'); });
-            document.getElementById('btn-menu-close-bottom').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('menu-modal').classList.remove('active'); });
-            document.getElementById('btn-menu-info').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('info-modal').classList.add('active'); });
-            document.getElementById('btn-close-info').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('info-modal').classList.remove('active'); });
-            document.getElementById('btn-menu-setting').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('setting-modal').classList.add('active'); });
-            document.getElementById('btn-close-setting').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('setting-modal').classList.remove('active'); });
-
-            // 5. Home 鍵：回到大廳
-            document.getElementById('btn-menu-home').addEventListener('click', () => { 
-                window.AudioMgr.playSFX('click'); 
-                if (window.self !== window.top) {
-                    window.parent.postMessage('closeGame', '*');
-                } else {
-                    window.location.href = 'https://zendwucloud.github.io/Casino-Lobby/';
-                }
-            });
-
-            // 6. 音效開關與押注控制
-            document.getElementById('chk-sound').addEventListener('change', (e) => {
-                window.AudioMgr.updateSettings(e.target.checked, e.target.checked);
-            });
-            document.getElementById('btn-buy').addEventListener('click', () => { 
-                // 👇 核心修復：如果轉輪正在轉動、結算中，或是開著「自動遊玩」，直接忽略點擊
-                if (engine.state.isSpinning || isAutoPlay) return; 
-                
-                window.AudioMgr.playSFX('click'); 
-                document.getElementById('buy-price-text').innerText = (engine.state.bet * 200).toLocaleString(); 
-                document.getElementById('buy-modal').classList.add('active'); 
-            });
-            document.getElementById('btn-buy-cancel').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); });
-            document.getElementById('btn-buy-confirm').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); engine.startSpin(true); });
-            document.getElementById('btn-plus').addEventListener('click', () => { window.AudioMgr.playSFX('click'); if(!engine.state.isSpinning) { engine.state.bet = Math.min(engine.state.bet + 100, 5000); View.updateBetUI(engine.state.bet); } });
-            document.getElementById('btn-minus').addEventListener('click', () => { window.AudioMgr.playSFX('click'); if(!engine.state.isSpinning) { engine.state.bet = Math.max(engine.state.bet - 100, 100); View.updateBetUI(engine.state.bet); } });
-            document.getElementById('btn-auto').addEventListener('click', () => {
-                if(engine.state.isSpinning) return;
-                isAutoPlay = !isAutoPlay;
-                if(isAutoPlay) { document.getElementById('btn-auto').classList.add('active'); engine.startSpin(); }
-                else { document.getElementById('btn-auto').classList.remove('active'); }
-            });
-            document.getElementById('btn-turbo-toggle').addEventListener('click', () => {
-                isTurboMode = !isTurboMode;
-                if(isTurboMode) document.getElementById('btn-turbo-toggle').classList.add('active');
-                else document.getElementById('btn-turbo-toggle').classList.remove('active');
-            });
+            // 3. 將引擎交給 GUIController，它會自動幫我們接管所有按鈕和 UI！
+            gui = new GUIController(engine);
         });
-
-
     </script>
 </body>
-</html>
+</html> 
