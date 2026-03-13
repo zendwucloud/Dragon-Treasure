@@ -882,7 +882,14 @@ updateMessage: function(text, styleClass, animationClass) {
             document.getElementById('chk-sound').addEventListener('change', (e) => {
                 window.AudioMgr.updateSettings(e.target.checked, e.target.checked);
             });
-            document.getElementById('btn-buy').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('buy-price-text').innerText = (engine.state.bet * 200).toLocaleString(); document.getElementById('buy-modal').classList.add('active'); });
+            document.getElementById('btn-buy').addEventListener('click', () => { 
+                // 👇 核心修復：如果轉輪正在轉動、結算中，或是開著「自動遊玩」，直接忽略點擊
+                if (engine.state.isSpinning || isAutoPlay) return; 
+                
+                window.AudioMgr.playSFX('click'); 
+                document.getElementById('buy-price-text').innerText = (engine.state.bet * 200).toLocaleString(); 
+                document.getElementById('buy-modal').classList.add('active'); 
+            });
             document.getElementById('btn-buy-cancel').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); });
             document.getElementById('btn-buy-confirm').addEventListener('click', () => { window.AudioMgr.playSFX('click'); document.getElementById('buy-modal').classList.remove('active'); engine.startSpin(true); });
             document.getElementById('btn-plus').addEventListener('click', () => { window.AudioMgr.playSFX('click'); if(!engine.state.isSpinning) { engine.state.bet = Math.min(engine.state.bet + 100, 5000); View.updateBetUI(engine.state.bet); } });
