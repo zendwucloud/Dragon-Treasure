@@ -839,6 +839,14 @@ updateMessage: function(text, styleClass, animationClass) {
             View.init();
             View.startPromoLoop(); // 啟動跑馬燈閒置迴圈
 
+            // 👇 核心修復：在背景偷偷預載所有巨大的 Sprite 動態圖，防止第一次中獎時破圖閃爍
+            const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
+            preloadSprites.forEach(src => {
+                let img = new Image();
+                img.src = src;
+            });
+            // 👆 預載結束
+
             // 2. 「開始遊戲」按鈕：必須在這裡綁定，否則遊戲會卡在載入畫面
             const btnStart = document.getElementById('btn-start-game');
             if(btnStart) {
