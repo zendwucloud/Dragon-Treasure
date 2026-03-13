@@ -778,12 +778,40 @@ updateMessage: function(text, styleClass, animationClass) {
                 scoreEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
                 
                 modal.classList.add('active');
-                window.AudioMgr.playSFX('bigwin');
-                window.CoinManager.fire(100, 0.5);
-                spawnConfetti();
 
+                // 👇 核心修復：根據贏分倍數，決定要播多華麗的特效
+                let fountain = null;
+                
+                if (totalWin >= engine.state.bet * 20) {
+                    // 【史詩大獎】贏超過 20 倍：大獎音效 + 持續 5 秒的金幣噴泉與連續彩帶
+                    window.AudioMgr.playSFX('bigwin');
+                    fountain = setInterval(() => { window.CoinManager.fire(40, 0.5); }, 200);
+                    for(let i=0; i<50; i++) { setTimeout(spawnConfetti, i * 40); }
+                } 
+                else if (totalWin >= engine.state.bet * 5) {
+                    // 【超級中獎】贏 5 ~ 20 倍：大獎音效 + 噴發兩次大量金幣與一次彩帶
+                    window.AudioMgr.playSFX('bigwin');
+                    window.CoinManager.fire(100, 0.5);
+                    setTimeout(() => window.CoinManager.fire(80, 0.5), 600);
+                    spawnConfetti();
+                } 
+                else if (totalWin > 0) {
+                    // 【普通中獎】有贏錢：一般贏分音效 + 噴發一次少量金幣
+                    window.AudioMgr.playSFX('win_free');
+                    window.CoinManager.fire(30, 0.5);
+                } 
+                else {
+                    // 【槓龜沒贏】播放小音效，不噴任何金幣 (避免嘲諷玩家)
+                    window.AudioMgr.playSFX('click');
+                }
+
+                // 讓結算畫面表演 5 秒
                 await View.wait(5000);
                 
+                // 時間到，記得關閉可能存在的持續噴泉
+                if (fountain) clearInterval(fountain);
+                
+                // 關閉畫面，回到一般模式
                 modal.classList.remove('active');
                 document.body.classList.remove('free-mode');
                 window.AudioMgr.playBGM('main');
@@ -791,7 +819,7 @@ updateMessage: function(text, styleClass, animationClass) {
                 // 👇 踩煞車：強制解除按鈕的快速旋轉動畫
                 document.getElementById('spin-icon').classList.remove('fast');
                 
-                // 補上安全鎖：只有在「自動遊玩」開啟時，才繼續轉下一局
+                // 👇 補上安全鎖：只有在「自動遊玩」開啟時，才繼續轉下一局
                 if (isAutoPlay) {
                     setTimeout(() => engine.startSpin(), 800);
                 }
