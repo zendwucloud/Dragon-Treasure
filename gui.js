@@ -137,12 +137,31 @@ export class GUIController {
         document.addEventListener('touchstart', function(e) { let el = document.querySelector('.info-content'); if(el) el.lastY = e.touches[0].clientY; }, { passive: false });
 
         // 開始遊戲
+        // 開始遊戲
         const btnStart = document.getElementById('btn-start-game');
         if(btnStart) {
             btnStart.addEventListener('click', () => {
+                
+                // 👇 核心修復：iOS 音訊解鎖 (Audio Unlocking)
+                // 在玩家第一次點擊的瞬間，將所有音效偷偷「摸」過一遍取得 iOS 信任
+                document.querySelectorAll('audio').forEach(audio => {
+                    audio.muted = true; // 先靜音，免得爆音
+                    let p = audio.play();
+                    if (p !== undefined) {
+                        p.then(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                            audio.muted = false; // 解鎖完畢，恢復正常音量
+                        }).catch(() => { audio.muted = false; });
+                    }
+                });
+
                 document.getElementById('loading-layer').style.display = 'none';
                 document.getElementById('game-stage').classList.add('loaded');
-                window.AudioMgr.playBGM('main');
+                
+                // 稍微延遲一點點播大廳音樂，確保解鎖流程順利跑完
+                setTimeout(() => window.AudioMgr.playBGM('main'), 100);
+                
                 window.CoinManager.init();
                 this.startPromoLoop();
             });
