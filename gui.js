@@ -17,19 +17,33 @@ export class GUIController {
             musicEnabled: true, sfxEnabled: true,
             updateSettings: function(musicOn, sfxOn) {
                 this.musicEnabled = musicOn; this.sfxEnabled = sfxOn;
-                if (!this.musicEnabled) { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } 
-                else { this.playBGM(document.body.classList.contains('free-mode') ? 'free' : 'main'); }
+                if (!this.musicEnabled) { 
+                    try { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } catch(e){} 
+                } 
+                else { 
+                    // 🌟 防護罩：確保玩家已經點擊過開始按鈕 (畫面已載入) 才接受大廳的播放指令
+                    const stage = document.getElementById('game-stage');
+                    if (stage && stage.classList.contains('loaded')) {
+                        this.playBGM(document.body.classList.contains('free-mode') ? 'free' : 'main'); 
+                    }
+                }
             },
             playBGM: function(type) {
                 if (!this.musicEnabled) return;
-                document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause();
+                try { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } catch(e){}
                 let target = document.getElementById((type === 'free') ? 'bgm_free' : 'bgm_main');
-                if(target) { target.currentTime = 0; target.volume = (type === 'free') ? 1.0 : 0.8; target.play().catch(()=>{}); }
+                if(target) { 
+                    target.volume = (type === 'free') ? 1.0 : 0.8; 
+                    target.play().catch(()=>{}); 
+                }
             },
             playSFX: function(name) {
                 if (!this.sfxEnabled) return;
                 let audio = document.getElementById(`sfx_${name}_1`);
-                if (audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
+                if (audio) { 
+                    try { audio.currentTime = 0; } catch(e){} 
+                    audio.play().catch(()=>{}); 
+                }
             }
         };
     }
@@ -137,34 +151,36 @@ export class GUIController {
         document.addEventListener('touchstart', function(e) { let el = document.querySelector('.info-content'); if(el) el.lastY = e.touches[0].clientY; }, { passive: false });
 
         // 開始遊戲
-        // 開始遊戲
         const btnStart = document.getElementById('btn-start-game');
         if(btnStart) {
             btnStart.addEventListener('click', () => {
-                
-                // 👇 核心修復：iOS 音訊解鎖 (Audio Unlocking)
-                // 在玩家第一次點擊的瞬間，將所有音效偷偷「摸」過一遍取得 iOS 信任
-                document.querySelectorAll('audio').forEach(audio => {
-                    audio.muted = true; // 先靜音，免得爆音
-                    let p = audio.play();
-                    if (p !== undefined) {
-                        p.then(() => {
-                            audio.pause();
-                            audio.currentTime = 0;
-                            audio.muted = false; // 解鎖完畢，恢復正常音量
-                        }).catch(() => { audio.muted = false; });
-                    }
-                });
-
                 document.getElementById('loading-layer').style.display = 'none';
                 document.getElementById('game-stage').classList.add('loaded');
                 
-                // 稍微延遲一點點播大廳音樂，確保解鎖流程順利跑完
-                setTimeout(() => window.AudioMgr.playBGM('main'), 100);
-                
-                window.CoinManager.init();
+                try {
+                    // 1. 正式啟動主遊戲音樂 (MG)
+                    window.AudioMgr.playBGM('main');
+                    
+                    // 2. 🤫 偷渡解鎖免費遊戲音樂 (FG) - 音量0播放後立刻暫停，騙過蘋果憑證
+                    let freeBgm = document.getElementById('bgm_free');
+                    if (freeBgm) {
+                        freeBgm.volume = 0;
+                        let p = freeBgm.play();
+                        if (p !== undefined) {
+                            p.then(() => {
+                                freeBgm.pause();
+                                freeBgm.currentTime = 0;
+                                freeBgm.volume = 1.0; // 恢復正常音量備用
+                            }).catch(() => {
+                                freeBgm.volume = 1.0; 
+                            });
+                        }
+                    }
+                } catch(e) { console.warn("Audio start bypassed", e); }
+
+                if (window.CoinManager) window.CoinManager.init();
                 this.startPromoLoop();
-            });
+            }, { once: true }); // 🌟 關鍵：確保只觸發一次
         }
 
         // Spin 按鈕
