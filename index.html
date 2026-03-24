@@ -70,6 +70,12 @@
         .sym-mul { z-index: 180; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; }
         .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
         .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100% !important; z-index: 999 !important; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; }
+        /* 👇 補上這裡：s1 ~ s5 的中獎動態精靈圖 (Sprite) */
+        .sym-1.active { background-image: url('s1_sprite.png') !important; background-size: 2800% 100% !important; z-index: 900 !important; animation: scatterRunFinal 1.5s steps(27) infinite, winAction 1s ease-in-out infinite !important; }
+        .sym-2.active { background-image: url('s2_sprite.png') !important; background-size: 2800% 100% !important; z-index: 900 !important; animation: scatterRunFinal 1.5s steps(27) infinite, winAction 1s ease-in-out infinite !important; }
+        .sym-3.active { background-image: url('s3_sprite.png') !important; background-size: 2800% 100% !important; z-index: 900 !important; animation: scatterRunFinal 1.5s steps(27) infinite, winAction 1s ease-in-out infinite !important; }
+        .sym-4.active { background-image: url('s4_sprite.png') !important; background-size: 2800% 100% !important; z-index: 900 !important; animation: scatterRunFinal 1.5s steps(27) infinite, winAction 1s ease-in-out infinite !important; }
+        .sym-5.active { background-image: url('s5_sprite.png') !important; background-size: 2800% 100% !important; z-index: 900 !important; animation: scatterRunFinal 1.5s steps(27) infinite, winAction 1s ease-in-out infinite !important; }
 
         @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
         .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; transition: none !important; } 
@@ -667,8 +673,11 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. 預載素材
-            const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
+            // 👇 將 s1 到 s5 的 sprite 檔名也加進預載清單中
+            const preloadSprites = [
+                'dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png',
+                's1_sprite.png', 's2_sprite.png', 's3_sprite.png', 's4_sprite.png', 's5_sprite.png'
+            ];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
             
             // 2. 初始化畫面
