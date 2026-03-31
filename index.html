@@ -763,7 +763,12 @@
             // 3. 將引擎交給 GUIController
             gui = new GUIController(engine);
 
-            // 🌟 修正點：將互斥鎖搬到這裡面，確保 AudioMgr 已經存在！
+            // 🌟 核心修正：主動向大廳請求資料 (解決重整後 Credit 變回 100,000 的問題)
+            if (window.parent) { 
+                window.parent.postMessage({ type: 'requestInitData' }, '*'); 
+            }
+
+            // 🌟 4. 終極音效互斥鎖 (安全攔截版)
             if (window.AudioMgr && window.AudioMgr.playBGM) {
                 const originalPlayBGM = window.AudioMgr.playBGM;
                 window.AudioMgr.playBGM = function(trackName) {
@@ -780,7 +785,7 @@
                     originalPlayBGM.call(window.AudioMgr, trackName);
                 };
             }
-        }); // 👈 互斥鎖要被這個括號包住
+        });
     </script>
 </body>
 </html> 
