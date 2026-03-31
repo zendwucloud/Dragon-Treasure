@@ -709,16 +709,14 @@
         // 🌟 遊戲端的接收雷達：攔截大廳傳來的資料
         window.addEventListener('message', (event) => {
             const data = event.data;
-            // 1. 接收餘額同步
             if (data.type === 'initBalance') {
                 engine.state.credit = data.value;
                 document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
             } 
-            // 2. 接收音效設定
             else if (data.type === 'updateSettings') { 
                 window.AudioMgr.updateSettings(data.music, data.sfx); 
             }
-            // 3. 接收動態說明文案
+            // 🌟 接收大廳傳來的說明文案 (火龍祕寶專用版)
             else if (data.type === 'initPromoText') {
                 const promoContainer = document.getElementById('loading-promo-text');
                 if (data.text && promoContainer) {
@@ -731,7 +729,7 @@
                     for (let i = 1; i < lines.length; i++) {
                         let line = lines[i].trim();
                         if (line !== '') {
-                            // 自動偵測分隔線，把前半段特色名稱標成青色
+                            // 自動偵測分隔線，把前半段特色名稱標成青色 (支援半形 | 或全形 ｜)
                             let parts = line.split(/\||｜/); 
                             if (parts.length > 1) {
                                 html += `<div class="promo-item"><span style="color:#00ffff;">${parts[0]}</span>｜${parts[1]}</div>`;
@@ -752,7 +750,7 @@
             }
         });
         window.addEventListener('DOMContentLoaded', () => {
-            // 👇 將 s1 到 s5 的 sprite 檔名也加進預載清單中
+            // 1. 預載素材 (已包含 s1 ~ s5)
             const preloadSprites = [
                 'dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png',
                 's1_sprite.png', 's2_sprite.png', 's3_sprite.png', 's4_sprite.png', 's5_sprite.png'
@@ -762,9 +760,27 @@
             // 2. 初始化畫面
             View.init();
 
-            // 3. 將引擎交給 GUIController，它會自動幫我們接管所有按鈕和 UI！
+            // 3. 將引擎交給 GUIController
             gui = new GUIController(engine);
-        });
+
+            // 🌟 修正點：將互斥鎖搬到這裡面，確保 AudioMgr 已經存在！
+            if (window.AudioMgr && window.AudioMgr.playBGM) {
+                const originalPlayBGM = window.AudioMgr.playBGM;
+                window.AudioMgr.playBGM = function(trackName) {
+                    const bgmMain = document.getElementById('bgm_main');
+                    const bgmFree = document.getElementById('bgm_free');
+                    if (trackName === 'main' && bgmFree) {
+                        bgmFree.pause();
+                        bgmFree.currentTime = 0;
+                    } 
+                    else if (trackName === 'free' && bgmMain) {
+                        bgmMain.pause();
+                        bgmMain.currentTime = 0;
+                    }
+                    originalPlayBGM.call(window.AudioMgr, trackName);
+                };
+            }
+        }); // 👈 互斥鎖要被這個括號包住
     </script>
 </body>
 </html> 
