@@ -6,16 +6,33 @@
     <title>Dragon's Treasure (Modular Final)</title>
     <style>
         /* --- 1. 基礎設定 --- */
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
+        /* 🌟 使用 100dvh 確保在 Safari 下能精準扣除導覽列高度 */
+        html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
         body { background-image: url('background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: flex; justify-content: center; align-items: center; font-family: 'Arial', sans-serif; user-select: none; -webkit-user-select: none; }
         
-        .stage { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; background-color: transparent; opacity: 0; transition: opacity 0.5s ease-in; }
+        .stage { 
+            position: relative; 
+            height: 100vh; height: 100dvh; 
+            aspect-ratio: 9/16; /* 🌟 核心修正：改用比例鎖定，取代舊的寬度計算 */
+            max-width: 100vw; 
+            max-height: calc(100vw * 16 / 9); 
+            background-color: transparent; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in; 
+        }
         .stage.loaded { opacity: 1; }
 
         /* --- 2. 載入過場 --- */
         #loading-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
         #loading-layer.hidden { opacity: 0; pointer-events: none; }
-        .loading-container { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+        .loading-container { 
+            position: relative; 
+            height: 100vh; height: 100dvh; 
+            aspect-ratio: 9/16;
+            max-width: 100vw; 
+            max-height: calc(100vw * 16 / 9); 
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center; 
+        }
         .loading-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
         .loading-bottom-ui { position: relative; z-index: 10; width: 70%; margin-bottom: 12%; display: flex; flex-direction: column; align-items: center; text-align: center; }
         #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
@@ -716,11 +733,13 @@
             else if (data.type === 'updateSettings') { 
                 window.AudioMgr.updateSettings(data.music, data.sfx); 
             }
-            // 🌟 接收大廳傳來的說明文案 (火龍祕寶專用版)
+            // 🌟 接收大廳傳來的說明文案 (火龍祕寶穩定版)
             else if (data.type === 'initPromoText') {
                 const promoContainer = document.getElementById('loading-promo-text');
-                if (data.text && promoContainer) {
-                    let lines = data.text.split(/\r?\n/);
+                if (promoContainer) {
+                    // 如果沒傳文案，至少清空它，不要顯示 undefined
+                    const safeText = data.text || ""; 
+                    let lines = safeText.split(/\r?\n/);
                     let html = '';
                     
                     if (lines.length > 0 && lines[0].trim() !== '') {
@@ -729,7 +748,6 @@
                     for (let i = 1; i < lines.length; i++) {
                         let line = lines[i].trim();
                         if (line !== '') {
-                            // 自動偵測分隔線，把前半段特色名稱標成青色 (支援半形 | 或全形 ｜)
                             let parts = line.split(/\||｜/); 
                             if (parts.length > 1) {
                                 html += `<div class="promo-item"><span style="color:#00ffff;">${parts[0]}</span>｜${parts[1]}</div>`;
@@ -738,11 +756,10 @@
                             }
                         }
                     }
-                    
                     promoContainer.innerHTML = html;
                     
-                    // 強制重置動畫，確保必定觸發淡入
-                    promoContainer.style.opacity = ''; 
+                    // 強制觸發淡入動畫
+                    promoContainer.style.opacity = '0'; 
                     promoContainer.style.animation = 'none';
                     void promoContainer.offsetWidth; 
                     promoContainer.style.animation = 'fadeInPromo 1.5s ease-in forwards';
@@ -750,7 +767,7 @@
             }
         });
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. 預載素材 (已包含 s1 ~ s5)
+            // 1. 預載素材 (確保動畫流暢)
             const preloadSprites = [
                 'dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png',
                 's1_sprite.png', 's2_sprite.png', 's3_sprite.png', 's4_sprite.png', 's5_sprite.png'
@@ -760,13 +777,16 @@
             // 2. 初始化畫面
             View.init();
 
-            // 3. 將引擎交給 GUIController
+            // 3. 初始化 GUI 控制器 (全域唯一，不要重複！)
             gui = new GUIController(engine);
 
-            // 🌟 核心修正：主動向大廳請求資料 (解決重整後 Credit 變回 100,000 的問題)
-            if (window.parent) { 
-                window.parent.postMessage({ type: 'requestInitData' }, '*'); 
-            }
+            // 🌟 核心修正：主動向大廳請求同步資料 (延遲 100ms 確保雷達已開)
+            setTimeout(() => {
+                if (window.parent) {
+                    console.log("【遊戲端】主動請求大廳同步資料...");
+                    window.parent.postMessage({ type: 'requestInitData' }, '*');
+                }
+            }, 100);
 
             // 🌟 4. 終極音效互斥鎖 (安全攔截版)
             if (window.AudioMgr && window.AudioMgr.playBGM) {
@@ -777,8 +797,7 @@
                     if (trackName === 'main' && bgmFree) {
                         bgmFree.pause();
                         bgmFree.currentTime = 0;
-                    } 
-                    else if (trackName === 'free' && bgmMain) {
+                    } else if (trackName === 'free' && bgmMain) {
                         bgmMain.pause();
                         bgmMain.currentTime = 0;
                     }
