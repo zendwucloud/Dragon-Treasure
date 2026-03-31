@@ -21,6 +21,47 @@
         #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
 
+        /* --- 載入畫面特色介紹 (八方陰影純淨白字版) --- */
+        #loading-promo-text {
+            position: relative;
+            z-index: 10;
+            width: 85%;
+            margin-bottom: 3vh; 
+            text-align: center; 
+            opacity: 0; 
+            animation: fadeInPromo 1.5s ease-in forwards; 
+        }
+        .promo-title {
+            color: #ffffff;
+            font-size: 2.3vh; 
+            font-family: 'Arial Black', sans-serif;
+            margin-bottom: 1.5vh;
+            /* 八方陰影包圍，保證白字不被吃掉 */
+            text-shadow: 
+                2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 
+                0 2px 0 #000, 2px 0 0 #000, 0 -2px 0 #000, -2px 0 0 #000,
+                3px 3px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+        }
+
+        .promo-item {
+            color: #ffffff;
+            font-size: 1.7vh; 
+            font-weight: 900; 
+            margin-bottom: 1.2vh;
+            line-height: 1.5;
+            text-align: left;
+            display: inline-block; 
+            /* 內文 1.5px 八方陰影 */
+            text-shadow: 
+                1.5px 1.5px 0 #000, -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 
+                0 1.5px 0 #000, 1.5px 0 0 #000, 0 -1.5px 0 #000, -1.5px 0 0 #000,
+                2px 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
+        }
+        @keyframes fadeInPromo { 
+            0% { opacity: 0; transform: translateY(10px); } 
+            100% { opacity: 1; transform: translateY(0); } 
+        }   
         /* --- 3. 遊戲內部與特效 --- */
         #bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(0.75); transition: filter 1.0s ease-in-out; }
         .free-mode #bg-video { filter: brightness(1.0); }
@@ -218,6 +259,9 @@
     <div id="loading-layer">
         <div class="loading-container">
             <img src="loading.jpg" class="loading-visual" onerror="this.style.display='none'">
+            
+            <div id="loading-promo-text"></div>
+
             <div class="loading-bottom-ui"><div id="btn-start-game" style="display:block;">★ 點擊開始遊戲 ★</div></div>
         </div>
     </div>
@@ -394,15 +438,6 @@
             wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); },
             getSymbolEl: function(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
         };
-
-        window.addEventListener('message', (event) => {
-            const data = event.data;
-            if (data.type === 'initBalance') {
-                engine.state.credit = data.value;
-                document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
-            } 
-            else if (data.type === 'updateSettings') { window.AudioMgr.updateSettings(data.music, data.sfx); }
-        });
 
         function syncBalanceToLobby() {
             if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
