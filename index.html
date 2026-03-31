@@ -706,7 +706,51 @@
                 if(gui.isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
             }
         });
-
+        // 🌟 遊戲端的接收雷達：攔截大廳傳來的資料
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            // 1. 接收餘額同步
+            if (data.type === 'initBalance') {
+                engine.state.credit = data.value;
+                document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
+            } 
+            // 2. 接收音效設定
+            else if (data.type === 'updateSettings') { 
+                window.AudioMgr.updateSettings(data.music, data.sfx); 
+            }
+            // 3. 接收動態說明文案
+            else if (data.type === 'initPromoText') {
+                const promoContainer = document.getElementById('loading-promo-text');
+                if (data.text && promoContainer) {
+                    let lines = data.text.split(/\r?\n/);
+                    let html = '';
+                    
+                    if (lines.length > 0 && lines[0].trim() !== '') {
+                        html += `<div class="promo-title">${lines[0]}</div>`;
+                    }
+                    for (let i = 1; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (line !== '') {
+                            // 自動偵測分隔線，把前半段特色名稱標成青色
+                            let parts = line.split(/\||｜/); 
+                            if (parts.length > 1) {
+                                html += `<div class="promo-item"><span style="color:#00ffff;">${parts[0]}</span>｜${parts[1]}</div>`;
+                            } else {
+                                html += `<div class="promo-item">${line}</div>`;
+                            }
+                        }
+                    }
+                    
+                    promoContainer.innerHTML = html;
+                    
+                    // 強制重置動畫，確保必定觸發淡入
+                    promoContainer.style.opacity = ''; 
+                    promoContainer.style.animation = 'none';
+                    void promoContainer.offsetWidth; 
+                    promoContainer.style.animation = 'fadeInPromo 1.5s ease-in forwards';
+                }
+            }
+        });
         window.addEventListener('DOMContentLoaded', () => {
             // 👇 將 s1 到 s5 的 sprite 檔名也加進預載清單中
             const preloadSprites = [
