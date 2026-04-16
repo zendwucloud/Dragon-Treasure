@@ -561,6 +561,10 @@
                 const winEl = document.getElementById('ui-win');
                 winEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
 
+                if (window.parent && winAmount > 0) {
+                    window.parent.postMessage({ type: 'win', amount: winAmount }, '*');
+                }
+
                 if (engine.state.isFreeGame) {
                     let currentMul = spinMultipliers > 0 ? spinMultipliers : 1;
                     document.getElementById('ui-multiplier').innerText = `x${currentMul}`;
